@@ -1,0 +1,239 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Catana Dark Theme */
+    --background: 0 0% 8%; /* Fundo escuro #141414 */
+    --foreground: 0 0% 95%; /* Texto claro */
+    --card: 0 0% 12%; /* Cards cinza escuro #1F1F1F */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 18%; /* Cinza escuro da logo Catana #2D2D2D */
+    --primary-foreground: 0 0% 95%;
+    --secondary: 0 5% 25%; /* Cinza escuro */
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 5% 60%;
+    --accent: 0 0% 18%; /* Cinza escuro da logo Catana */
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%; /* Bordas escuras */
+    --input: 0 0% 18%;
+    --ring: 0 0% 18%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 0 0% 5%; /* #0D0D0D */
+    --foreground: 0 0% 95%;
+    --card: 0 0% 25%; /* #404040 */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 18%; /* Cinza escuro da logo Catana #2D2D2D */
+    --primary-foreground: 0 0% 95%;
+    --secondary: 0 2% 54%; /* #89888C */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 25%;
+    --muted-foreground: 0 2% 54%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 0 0% 18%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom Scrollbar Styles - Dark Theme */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #1a1a1a; /* Fundo escuro */
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #2d2d2d; /* Cor primária Catana */
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #3d3d3d; /* Cor primária Catana hover */
+}
+
+/* Garantir fidelidade de cores ao exportar PDF */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Eliminar margens e espaçamentos que criam linhas */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remover borders e outlines de todos os elementos */
+  * {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  /* Garantir que não há espaços entre páginas */
+  .pdf-page-content {
+    margin: 0 !important;
+    border: none !important;
+  }
+
+  /* DiPack templates - apenas remover margem, manter bordas dos elementos */
+  [class*="DiPack"] {
+    margin: 0 !important;
+  }
+}
+
+/* Força cores exatas para preview e exportação de PDF */
+.pdf-preview-content *,
+.pdf-page-content * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
+}
+
+/* Eliminar TODAS as bordas, sombras e espaçamentos no PDF */
+.pdf-page-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Garantir que elementos dentro do PDF tenham box-sizing correto */
+.pdf-page-content > *,
+.pdf-page-content * {
+  box-sizing: border-box !important;
+  /* REMOVED: border: none !important; - permitir bordas nos elementos */
+  outline: none !important;
+  /* REMOVED: box-shadow: none !important; - permitir sombras nos elementos */
+}
+
+/* Forçar background branco em todos os templates DiPACK */
+[class*="DiPack"] {
+  background-color: white !important;
+}
+
+/* Regras específicas para print - apenas remover decorações, manter bordas */
+@media print {
+  [class*="DiPack"] {
+    outline: none !important;
+  }
+
+  /* Remover sublinhado de links, mas manter bordas dos elementos */
+  [class*="DiPack"] a {
+    text-decoration: none !important;
+  }
+}
+
+/* Cores DiPACK específicas com valores RGB exatos */
+.dipack-gold {
+  color: #f5a623 !important;
+  background-color: #f5a623 !important;
+}
+
+.dipack-gold-text {
+  color: #f5a623 !important;
+}
+
+.dipack-gold-bg {
+  background-color: #f5a623 !important;
+}
+
+.dipack-gold-border {
+  border-color: #f5a623 !important;
+}
+
+/* ============================================
+   FIGMA CANVAS - FEEDBACK VISUAL DE SELEÇÃO
+   ============================================ */
+
+/* Micro-animação de seleção (aparece UMA VEZ ao selecionar) */
+@keyframes select-pulse {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-select-pulse {
+  animation: select-pulse 150ms ease-out;
+}
+
+/* Animação de aparecimento dos handles */
+@keyframes handle-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-handle-appear {
+  animation: handle-appear 180ms ease-out;
+}
+
+/* Handles de resize com hover */
+.resize-handle {
+  transition: all 120ms ease-out;
+}
+
+.resize-handle:hover {
+  transform: scale(1.3);
+  border-width: 2.5px;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================
+   FIGMA TOOLBAR - FEEDBACK DE FERRAMENTAS
+   ============================================ */
+
+/* Micro-animação de ativação de ferramenta (uma vez) */
+@keyframes tool-activate {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-tool-activate {
+  animation: tool-activate 140ms ease-out;
+}

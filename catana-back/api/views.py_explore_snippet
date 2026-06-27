@@ -1,0 +1,19 @@
+
+class ExploreProductViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ReadOnly ViewSet for Public Products (Explore Module).
+    Strictly filters for is_public=True.
+    Exposes only safe fields via PublicProductSerializer.
+    """
+    queryset = Product.objects.filter(is_public=True)
+    serializer_class = PublicProductSerializer
+    permission_classes = [permissions.AllowAny] # Or IsAuthenticated, depending on reqs. Let's start with AllowAny for "Public" nature.
+    lookup_field = 'public_slug'
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'category__name', 'description']
+    ordering_fields = ['public_at', 'name', 'price']
+    ordering = ['-public_at']
+
+    def get_queryset(self):
+        # Double check strictly public
+        return Product.objects.filter(is_public=True)

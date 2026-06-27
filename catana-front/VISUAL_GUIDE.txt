@@ -1,0 +1,149 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    GUIA VISUAL - ONDE ENCONTRAR TEMPLATES DIPACK              ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          TELA DO EDITOR DE CATÁLOGOS                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+╔═══════════════╦═══════════════════════════════════════╦════════════════════╗
+║               ║                                       ║                    ║
+║   SIDEBAR     ║         CANVAS (ÁREA CENTRAL)         ║   PROPRIEDADES     ║
+║   ESQUERDA    ║                                       ║     (DIREITA)      ║
+║               ║                                       ║                    ║
+║ ┌───────────┐ ║  ┌─────────────────────────────┐     ║  ┌──────────────┐  ║
+║ │ Camadas   │ ║  │                             │     ║  │ Posição      │  ║
+║ │Properties │ ║  │                             │     ║  │ Tamanho      │  ║
+║ │ Página    │ ║  │     Seus elementos          │     ║  │ Estilo       │  ║
+║ └───────────┘ ║  │     ficam aqui              │     ║  │ Cores        │  ║
+║               ║  │                             │     ║  └──────────────┘  ║
+║ ▼ Formas      ║  └─────────────────────────────┘     ║                    ║
+║ ▼ Texto       ║                                       ║                    ║
+║ ▼ Produtos    ║                                       ║                    ║
+║ ▼ Mídia       ║                                       ║                    ║
+║ ▼ Interativo  ║                                       ║                    ║
+║ ▼ Técnico     ║                                       ║                    ║
+║ ▼ Layout      ║                                       ║                    ║
+║               ║                                       ║                    ║
+║ ╔═══════════╗ ║                                       ║                    ║
+║ ║ Templates ║ ║  ⬅️⬅️⬅️  PROCURE AQUI! ⬅️⬅️⬅️             ║                    ║
+║ ║  DiPACK   ║ ║                                       ║                    ║
+║ ╠═══════════╣ ║                                       ║                    ║
+║ ║           ║ ║                                       ║                    ║
+║ ║ 📘  🏢   ║ ║                                       ║                    ║
+║ ║ Capa Inst ║ ║                                       ║                    ║
+║ ║           ║ ║                                       ║                    ║
+║ ║ 📦  📄   ║ ║                                       ║                    ║
+║ ║ Most Rod  ║ ║                                       ║                    ║
+║ ║           ║ ║                                       ║                    ║
+║ ║ 📕       ║ ║                                       ║                    ║
+║ ║ Contra    ║ ║                                       ║                    ║
+║ ╚═══════════╝ ║                                       ║                    ║
+║               ║                                       ║                    ║
+╚═══════════════╩═══════════════════════════════════════╩════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            COMO USAR OS TEMPLATES                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PASSO 1: LOCALIZAR
+   👁️  Olhe para a SIDEBAR ESQUERDA (barra escura)
+   📜  Role até o FINAL
+   ⭐  Encontre "Templates DiPACK" (com fundo destacado)
+
+PASSO 2: CLICAR
+   🖱️  Clique no botão do template desejado
+   Exemplos:
+   • 📘 Capa DiPACK
+   • 🏢 Institucional
+   • 📦 Mostruário
+   • 📄 Rodapé DiPACK
+   • 📕 Contracapa
+
+PASSO 3: EDITAR
+   ✏️  O template aparece no canvas (centro)
+   🎨  Use o painel da DIREITA para editar
+   ↔️  Arraste para mover
+   📏  Redimensione se necessário
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         O QUE VOCÊ VERÁ AO CLICAR                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📘 CAPA DiPACK (800x1100px)
+┌─────────────────────────────┐
+│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │ ← Fundo escuro
+│ ▓                         ▓ │
+│ ▓   ╔═══════════════╗    ▓ │
+│ ▓   ║    DiPACK     ║    ▓ │ ← Logo em dourado
+│ ▓   ║  EMBALAGENS   ║    ▓ │
+│ ▓   ╚═══════════════╝    ▓ │
+│ ▓                         ▓ │
+│ ▓  Catálogo de Mostruários ▓│
+│ ▓    Versão 2025/2026     ▓ │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │
+└─────────────────────────────┘
+
+🏢 INSTITUCIONAL (800x1100px)
+┌─────────────────────────────┐
+│ Sobre a DiPACK              │
+│ ───────────────────────     │
+│                             │
+│ [Texto institucional...]    │
+│                             │
+│ ┌────┐  ┌────┐  ┌────┐    │
+│ │🏆 │  │📈 │  │❤️ │    │ ← 3 colunas
+│ │Mis │  │Vis │  │Val │    │
+│ │são │  │são │  │ores│    │
+│ └────┘  └────┘  └────┘    │
+└─────────────────────────────┘
+
+📦 MOSTRUÁRIO (800x1100px)
+┌─────────────────────────────┐
+│ Linha Exibição               │
+│ ─────────────               │
+│                             │
+│ ┌────┐ ┌────┐ ┌────┐      │
+│ │Img │ │img │ │img │      │ ← Grid 3x2
+│ │REF │ │REF │ │REF │      │   (6 produtos)
+│ └────┘ └────┘ └────┘      │
+│ ┌────┐ ┌────┐ ┌────┐      │
+│ │img │ │img │ │img │      │
+│ │REF │ │REF │ │REF │      │
+│ └────┘ └────┘ └────┘      │
+│                             │
+│ DiPACK - Página 03          │ ← Rodapé
+└─────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              INFORMAÇÕES ÚTEIS                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+🌐 URL do Servidor:  http://localhost:5175/
+
+📂 Localização:      Sidebar Esquerda > Final > "Templates DiPACK"
+
+🎨 Cores DiPACK:     Amarelo-ouro (#f5a623) + Cinza grafite (#1a1a1a)
+
+📐 Tamanhos:         800x1100px (páginas completas)
+                     800x60px (rodapé)
+
+🔄 Recarregar:       Ctrl+R (Windows) ou Cmd+R (Mac)
+
+🐛 Console:          F12 (ver erros se houver)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CHECKLIST DE VERIFICAÇÃO                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+□ Servidor rodando em http://localhost:5175/
+□ Página do editor aberta
+□ Sidebar esquerda visível
+□ Rolei até o final da sidebar
+□ Vejo a seção "Templates DiPACK"
+□ Cliquei em um template
+□ Template apareceu no canvas
+
+Se TODOS os itens estão marcados ✅ = Sucesso!
+
+Se algum NÃO está funcionando ❌ = Veja o arquivo ONDE_ENCONTRAR_TEMPLATES.md
