@@ -218,8 +218,8 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
           const dx = mouseCanvas.x - snapshot.mouseInitial.x;
           const dy = mouseCanvas.y - snapshot.mouseInitial.y;
 
-          let newPosition = { ...snapshot.positionInitial };
-          let newSize = { ...snapshot.sizeInitial };
+          const newPosition = { ...snapshot.positionInitial };
+          const newSize = { ...snapshot.sizeInitial };
 
           // Aplicar resize baseado no handle
           switch (snapshot.handle) {

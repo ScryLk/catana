@@ -114,7 +114,7 @@ export const localToGlobal = (
   element: CatalogElement,
   allElements: CatalogElement[]
 ): Position => {
-  let globalPos = { ...position };
+  const globalPos = { ...position };
   let current = element;
 
   // Subir na hierarquia somando posições

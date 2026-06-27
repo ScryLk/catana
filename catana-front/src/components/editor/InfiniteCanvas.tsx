@@ -1104,7 +1104,7 @@ export const InfiniteCanvas: FC = () => {
 
         console.log('[InfiniteCanvas] Criando elemento na posição:', { worldX, worldY, clientX: e.clientX, clientY: e.clientY, pan, zoomDecimal });
 
-        let elementData: any = {
+        const elementData: any = {
           position: { x: worldX, y: worldY },
           style: {},
           visible: true,

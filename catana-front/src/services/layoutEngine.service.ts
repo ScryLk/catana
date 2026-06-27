@@ -74,7 +74,7 @@ export function processElement(
   const validation = validateElement(element);
 
   // 2. Aplicar regras baseadas no role
-  let processed = applyRulesToElement(element);
+  const processed = applyRulesToElement(element);
 
   // 3. Calcular posicionamento automático (flow vertical)
   if (!processed.position || context.layout.type === 'vertical-stack') {

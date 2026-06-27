@@ -44,8 +44,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     // Element Actions
     addElement: (element, targetPageId?: string) => {
-      console.log('[EditorStore] addElement chamado com:', element);
-
       const state = get();
       // Se targetPageId foi fornecido, usar ele; senão usar a página atual
       const targetPage = targetPageId
@@ -56,8 +54,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         console.error('[EditorStore] Não há página de destino!', { targetPageId, currentPageId: state.currentPageId });
         return;
       }
-
-      console.log('[EditorStore] Adicionando elemento à página:', targetPage.id, targetPage.name);
 
       // Fazer uma cópia profunda do content para evitar mutações
       const contentCopy = element.content ? JSON.parse(JSON.stringify(element.content)) : undefined;
@@ -98,9 +94,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         locked: element.locked ?? false,
       };
 
-      console.log('[EditorStore] Novo elemento criado:', newElement);
-      console.log('[EditorStore] Content do elemento:', JSON.stringify(newElement.content));
-
       set((state) => {
         const newPages = state.pages.map((page) =>
           page.id === targetPage.id
@@ -121,13 +114,11 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     updateElement: (id, updates) => {
-      console.log('[EditorStore] updateElement chamado - id:', id, 'updates:', updates);
       set((state) => {
         const newPages = state.pages.map((page) => {
           const elements = page.elements.map((el) => {
             if (el.id === id) {
               const updated = { ...el, ...updates };
-              console.log('[EditorStore] Elemento atualizado:', updated);
               return updated;
             }
             return el;
@@ -453,10 +444,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         const newHistory = state.history.slice(0, state.historyIndex + 1);
         newHistory.push(newPages);
 
-        console.log('[EditorStore] addPage - Nova página criada:', newPage.id, 'Nome:', newPage.name);
-        console.log('[EditorStore] addPage - currentPageId atual:', state.currentPageId);
-        console.log('[EditorStore] addPage - Mudando para nova página:', newPage.id);
-
         return {
           pages: newPages,
           history: newHistory.slice(-MAX_HISTORY),
@@ -493,26 +480,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     setCurrentPage: (pageId) => {
-      const state = get();
-      const targetPage = state.pages.find(p => p.id === pageId);
-      console.log('[EditorStore] setCurrentPage chamado:');
-      console.log('  - pageId:', pageId);
-      console.log('  - Página encontrada:', targetPage?.name);
-      console.log('  - Elementos na página:', targetPage?.elements.length || 0);
-
-      // Log detalhado de todos os elementos
-      if (targetPage && targetPage.elements.length > 0) {
-        targetPage.elements.forEach((el, index) => {
-          console.log(`  - Elemento ${index + 1}:`, {
-            type: el.type,
-            hasContent: !!el.content,
-            hasProducts: !!el.content?.products,
-            productsLength: el.content?.products?.length || 0,
-            contentKeys: el.content ? Object.keys(el.content) : []
-          });
-        });
-      }
-
       set({ currentPageId: pageId, selectedElementId: null });
     },
 

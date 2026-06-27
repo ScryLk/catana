@@ -80,7 +80,7 @@ export const UserCatalogs: FC = () => {
             const sedeId = getId(storedSede);
             const orgId = getId(storedOrg);
 
-            let params: { sede?: number; organization?: number } = {};
+            const params: { sede?: number; organization?: number } = {};
 
             if (sedeId && !isNaN(sedeId)) {
                 params.sede = sedeId;

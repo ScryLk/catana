@@ -355,7 +355,7 @@ export const FigmaCanvas: FC = () => {
 
   // Helper para criar elementos
   const createElementAtPosition = (position: Position) => {
-    let elementData: any = {
+    const elementData: any = {
       type: 'shape-rectangle',
       position,
       size: { width: 200, height: 150 },
