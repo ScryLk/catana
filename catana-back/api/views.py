@@ -6,7 +6,8 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Sum, Q
 from django.contrib.auth import update_session_auth_hash
 from .models import (
-    User, Product, Media, MediaFolder, Theme, Catalog, Page, Component, PageComponent, Comment, Activity, Organization, Sede, SedeSharing, Category, UserPreferences, PublicProfile
+    User, Product, Media, MediaFolder, Theme, Catalog, Page, Component, PageComponent, Comment, Activity, Organization, Sede, SedeSharing, Category, UserPreferences, PublicProfile,
+    Notification, Conversation, Message, ProfileFollow, ProfileSave, CatalogLike, CatalogView, BlockedUser
 )
 from .serializers import (
     UserSerializer, ProductSerializer, MediaSerializer, MediaFolderSerializer,
@@ -14,7 +15,11 @@ from .serializers import (
     PageComponentSerializer, CommentSerializer, ActivitySerializer,
     OrganizationSerializer, SedeSerializer, SedeSharingSerializer, CategorySerializer,
     UserProfileSerializer, UserPreferencesSerializer, UpdateProfileSerializer, ChangePasswordSerializer,
-    PublicProductSerializer
+    PublicProductSerializer,
+    NotificationSerializer, MessageSerializer, ConversationSerializer,
+    BulkProductSerializer, BulkImportRequestSerializer,
+    PublicProfileSerializer, PublicProfileCreateSerializer, PublicProfileUpdateSerializer,
+    PublicProfileSettingsSerializer, ProfileFollowSerializer, PublicCatalogSerializer, CatalogLikeSerializer
 )
 from .permissions import IsOrganizationAdmin, CanCreateSede
 
@@ -31,6 +36,17 @@ from rest_framework import serializers
 #   - TokenRefreshView         (POST /api/auth/token/refresh/) [simplejwt]
 #   - ExploreProductViewSet    (GET  /api/explore/products/)
 #   - CatalogViewSet.explore   (GET  /api/catalogs/explore/)
+#
+# Phase 4 - leituras públicas de descoberta (AllowAny explícito):
+#   - public_profile_search        (GET  /api/public-profiles/search)
+#   - public_profile_suggested     (GET  /api/public-profiles/suggested)
+#   - public_profile_featured      (GET  /api/public-profiles/featured)
+#   - public_profile_check_username(GET  /api/public-profiles/check-username)
+#   - public_profile_by_username   (GET  /api/public-profiles/username/<username>)
+#   - public_profile_detail        (GET  /api/public-profiles/<id>)
+#   - public_profile_catalogs      (GET  /api/public-profiles/<id>/catalogs)
+#   - public_catalogs_featured     (GET  /api/public-catalogs/featured)
+#   - public_catalog_view          (POST /api/public-catalogs/<id>/view) [view anônima]
 # Tudo o mais exige token válido. Os viewsets de organização/sede aplicam
 # também as classes de permissions.py (IsOrganizationAdmin / CanCreateSede).
 
@@ -257,6 +273,176 @@ class ProductViewSet(viewsets.ModelViewSet):
             product.saves.add(user)
             saved = True
         return Response({'saved': saved, 'count': product.saves.count()})
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def bulk_import(self, request):
+        """
+        4.4: Importação em lote de produtos.
+        Body: {"products": [...], "sede"?: id, "organization"?: id}
+        Cada produto pode trazer seu próprio sede/organization; caso ausente,
+        usa o sede/organization do nível superior do payload.
+        Retorna {"success": N, "failed": M, "errors": [...], "created_ids": [...]}.
+        """
+        from django.db import transaction
+        from decimal import Decimal, InvalidOperation
+
+        user = request.user
+        products_payload = request.data.get('products', [])
+        if not isinstance(products_payload, list):
+            return Response(
+                {'error': 'O campo "products" deve ser uma lista.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Defaults de sede/organization no nível superior do request.
+        default_sede = request.data.get('sede')
+        default_org = request.data.get('organization')
+
+        MAX_PRODUCTS = 500
+        if len(products_payload) > MAX_PRODUCTS:
+            return Response(
+                {'error': f'Limite de {MAX_PRODUCTS} produtos por importação excedido.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Caches para validação de org/sede e categorias.
+        org_cache = {}
+        sede_cache = {}
+        category_cache = {}
+
+        def get_org(org_id):
+            if org_id in org_cache:
+                return org_cache[org_id]
+            try:
+                org = Organization.objects.get(id=org_id)
+            except Organization.DoesNotExist:
+                org = None
+            org_cache[org_id] = org
+            return org
+
+        def get_sede(sede_id):
+            if sede_id in sede_cache:
+                return sede_cache[sede_id]
+            try:
+                sede = Sede.objects.get(id=sede_id)
+            except Sede.DoesNotExist:
+                sede = None
+            sede_cache[sede_id] = sede
+            return sede
+
+        def get_or_create_category(name, org, sede):
+            if not name:
+                return None
+            key = (str(name).strip().lower(), org.id if org else None)
+            if key in category_cache:
+                return category_cache[key]
+            category = Category.objects.filter(
+                name__iexact=str(name).strip(),
+                organization=org,
+            ).first()
+            if not category:
+                category = Category.objects.create(
+                    name=str(name).strip(),
+                    organization=org,
+                    sede=sede,
+                    created_by=user,
+                )
+            category_cache[key] = category
+            return category
+
+        success = 0
+        failed = 0
+        errors = []
+        created_ids = []
+
+        for index, raw in enumerate(products_payload):
+            line = index + 1
+            row = dict(raw) if isinstance(raw, dict) else {}
+
+            # Preenche org/sede com os defaults do request, se ausentes.
+            if not row.get('organization'):
+                row['organization'] = default_org
+            if not row.get('sede'):
+                row['sede'] = default_sede
+
+            serializer = BulkProductSerializer(data=row)
+            if not serializer.is_valid():
+                failed += 1
+                msgs = []
+                for field, field_errors in serializer.errors.items():
+                    for err in field_errors:
+                        msgs.append(f'{field}: {err}')
+                errors.append(f'Linha {line}: {"; ".join(msgs)}')
+                continue
+
+            data = serializer.validated_data
+
+            # Validação de organização e acesso.
+            org = get_org(data['organization'])
+            if org is None:
+                failed += 1
+                errors.append(f'Linha {line}: organização {data["organization"]} não encontrada')
+                continue
+            if not user.is_superuser and not user.organizations.filter(id=org.id).exists():
+                failed += 1
+                errors.append(f'Linha {line}: sem permissão na organização {org.id}')
+                continue
+
+            # Validação de sede (deve pertencer à organização).
+            sede = get_sede(data['sede'])
+            if sede is None:
+                failed += 1
+                errors.append(f'Linha {line}: sede {data["sede"]} não encontrada')
+                continue
+            if sede.organization_id != org.id:
+                failed += 1
+                errors.append(f'Linha {line}: sede {sede.id} não pertence à organização {org.id}')
+                continue
+
+            name = (data.get('name') or '').strip()
+            if not name:
+                failed += 1
+                errors.append(f'Linha {line}: nome do produto é obrigatório')
+                continue
+
+            sku = (data.get('sku') or '').strip()
+            if Product.objects.filter(sku=sku).exists():
+                failed += 1
+                errors.append(f"Linha {line}: SKU '{sku}' já existe no sistema")
+                continue
+
+            category = get_or_create_category(data.get('category'), org, sede)
+
+            price = data.get('price')
+            if price is None:
+                price = Decimal('0')
+
+            try:
+                with transaction.atomic():
+                    product = Product.objects.create(
+                        name=name,
+                        description=data.get('description') or '',
+                        price=price,
+                        sku=sku,
+                        stock=data.get('stock') or 0,
+                        currency=data.get('currency') or 'BRL',
+                        category=category,
+                        organization=org,
+                        sede=sede,
+                        created_by=user,
+                    )
+                created_ids.append(product.id)
+                success += 1
+            except Exception as e:
+                failed += 1
+                errors.append(f'Linha {line}: {str(e)}')
+
+        return Response({
+            'success': success,
+            'failed': failed,
+            'errors': errors,
+            'created_ids': created_ids,
+        })
 
 class MediaViewSet(viewsets.ModelViewSet):
     queryset = Media.objects.all()
