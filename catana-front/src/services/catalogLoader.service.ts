@@ -5,6 +5,7 @@
  * Aplica automaticamente as regras de layout profissional
  */
 
+import api from './api';
 import { catalogService } from './catalogService';
 import { processPage, validateCatalog, generateValidationReport } from './layoutEngine.service';
 import type { CatalogElement, CatalogPage } from '../types/editor';
@@ -59,50 +60,25 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
     const catalog = await catalogService.getCatalog(catalogId);
 
     // 2. Buscar páginas do catálogo
-    const response = await fetch(`http://localhost:8000/api/pages/?catalog=${catalogId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to load pages: ${response.statusText}`);
-    }
-
-    const backendPages: BackendPage[] = await response.json();
+    const backendPages: BackendPage[] = (
+      await api.get(`/api/pages/?catalog=${catalogId}`)
+    ).data;
 
     // 3. Para cada página, buscar seus componentes
     const pagesWithComponents = await Promise.all(
       backendPages.map(async (page) => {
-        const componentsResponse = await fetch(
-          `http://localhost:8000/api/page-components/?page=${page.id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            }
-          }
-        );
-
-        if (!componentsResponse.ok) {
+        let pageComponents: BackendPageComponent[];
+        try {
+          pageComponents = (await api.get(`/api/page-components/?page=${page.id}`)).data;
+        } catch {
           console.warn(`Failed to load components for page ${page.id}`);
           return { ...page, components: [] };
         }
 
-        const pageComponents = await componentsResponse.json();
-
         // Buscar dados completos dos componentes
         const componentsWithData = await Promise.all(
           pageComponents.map(async (pc: any) => {
-            const componentResponse = await fetch(
-              `http://localhost:8000/api/components/${pc.component}/`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                }
-              }
-            );
-
-            const component = await componentResponse.json();
+            const component = (await api.get(`/api/components/${pc.component}/`)).data;
             return {
               ...pc,
               component
@@ -120,18 +96,11 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
     // 4. Buscar Design Tokens do theme (se existir)
     let designTokens: DesignTokens | undefined;
     if (catalog.theme) {
-      const themeResponse = await fetch(
-        `http://localhost:8000/api/themes/${catalog.theme}/`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }
-      );
-
-      if (themeResponse.ok) {
-        const theme = await themeResponse.json();
+      try {
+        const theme = (await api.get(`/api/themes/${catalog.theme}/`)).data;
         designTokens = theme.styles?.designTokens;
+      } catch {
+        // Tema opcional: segue sem design tokens se a requisição falhar.
       }
     }
 
@@ -214,7 +183,7 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
 
   } catch (error) {
     console.error('[CatalogLoader] Error loading catalog:', error);
-    throw new Error(`Failed to load catalog: ${error.message}`);
+    throw new Error(`Failed to load catalog: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -223,18 +192,7 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
  */
 export async function isImportedCatalog(catalogId: number): Promise<boolean> {
   try {
-    const response = await fetch(
-      `http://localhost:8000/api/pages/?catalog=${catalogId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      }
-    );
-
-    if (!response.ok) return false;
-
-    const pages = await response.json();
+    const pages = (await api.get(`/api/pages/?catalog=${catalogId}`)).data;
     return pages.length > 0;
   } catch {
     return false;

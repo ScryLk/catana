@@ -417,7 +417,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
             }}
             onDelete={() => {
               // Remove element from store
-              useEditorStore.getState().removeElement(element.id);
+              useEditorStore.getState().deleteElement(element.id);
             }}
             onCommit={() => {
               // Commit to history (optional callback for future undo/redo)
