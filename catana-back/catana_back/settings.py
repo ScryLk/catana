@@ -1,3 +1,6 @@
+# TODO(humano): SEG-01 - rotacionar SECRET_KEY e a senha do banco e expurgar o
+# .env do historico git (BFG/git filter-repo). O .env foi removido do tracking,
+# mas os segredos antigos ja vazaram no historico e precisam ser invalidados.
 import environ
 from pathlib import Path
 
@@ -21,10 +24,14 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = ['*']  # Permite todos os hosts em desenvolvimento
+# SEG-04: hosts e origens lidos de env, com default restrito quando DEBUG=False.
+# Em dev (DEBUG=True) caímos para o comportamento aberto de sempre.
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=(['*'] if DEBUG else []))
 
 # CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True  # Para desenvolvimento
+# Em dev libera tudo; em prod usa a allowlist de CORS_ALLOWED_ORIGINS do env.
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
+CORS_ALLOW_ALL_ORIGINS = DEBUG and not CORS_ALLOWED_ORIGINS
 CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
@@ -123,10 +130,22 @@ MEDIA_ROOT = BASE_DIR / 'media'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    # INC-07: aponta o schema do drf-spectacular como gerador padrao.
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 AUTH_USER_MODEL = 'api.User'
+
+# SEG-05: hardening de producao. So vale quando DEBUG=False; em dev nada muda.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
+    SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
