@@ -7,7 +7,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { organizationService } from '@/services/organizationService';
 import type { Organization, Sede } from '@/types/api';
-import { Building2, Plus, Loader2, Trash2, MapPin, Settings, Share2, Users, AlertTriangle, Star, Shield } from 'lucide-react';
+import { Building2, Plus, Loader2, Trash2, MapPin, Settings, Share2, Users, Star, Shield } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';

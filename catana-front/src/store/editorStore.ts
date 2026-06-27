@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { EditorStore, CatalogElement, CatalogPage, HeaderFooterConfig, CatalogState } from '../types/editor';
+import type { EditorStore, CatalogElement, CatalogPage, HeaderFooterConfig } from '../types/editor';
 import type { DesignTokens } from '../types/designTokens';
 import { DEFAULT_DESIGN_TOKENS } from '../types/designTokens';
 import { exportCatalog, downloadCatalogJSON } from '../services/catalogIO.service';

@@ -1,6 +1,5 @@
 import { type FC, useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { useAssetStore } from '../../store/assetStore';
 import {
   ChevronDown,
   ChevronRight,
@@ -10,12 +9,10 @@ import {
   Loader2,
   MousePointer2,
 } from 'lucide-react';
-import { ImageSelector } from './ImageSelector';
 import { imageProcessingService } from '../../services/imageProcessingService';
 
 export const PropertiesPanel: FC = () => {
   const { getCurrentPage, selectedElementId, updateElement, deleteElement, duplicateElement, updateElementStyle } = useEditorStore();
-  const { getAsset, getAssetByUrl } = useAssetStore();
   const currentPage = getCurrentPage();
   const selectedElement = currentPage?.elements.find((el) => el.id === selectedElementId);
   const [isProcessing, setIsProcessing] = useState(false);

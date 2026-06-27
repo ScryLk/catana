@@ -10,14 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { User, Lock, Building2, Settings, Activity, Upload, Save, LogOut, Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { User, Lock, Building2, Settings, Activity, Upload, Save, LogOut } from 'lucide-react';
 import { profileService, type UserProfile, type UserPreferences, type ActivityLog } from '@/services/profileService';
 import { toast } from 'sonner';
 import { LoadingScreen } from '@/components/common/LoadingScreen';
 
 export const Profile: FC = () => {
-  const user = useAuthStore((state) => state.user);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

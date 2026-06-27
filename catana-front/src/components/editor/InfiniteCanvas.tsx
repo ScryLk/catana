@@ -6,7 +6,7 @@ import { useUIContext } from '../../contexts/UIContext';
 import { ContextMenu } from './ContextMenu';
 import { QRCode } from './elements/QRCode';
 import { HeaderFooter } from './HeaderFooter';
-import { SmartGuides, type Guide } from './SmartGuides';
+import { SmartGuides } from './SmartGuides';
 import type { CatalogElement } from '../../types/editor';
 import { FiCopy, FiTrash2, FiEye, FiEyeOff, FiLock, FiUnlock, FiLayers, FiImage, FiDownload } from 'react-icons/fi';
 import { BsBoxes, BsGrid3X3 } from 'react-icons/bs';

@@ -41,7 +41,6 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
   position,
   size,
   camera,
-  viewportRect,
   isSelected,
   isLocked,
   onChange,

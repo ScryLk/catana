@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { chatService } from '../services/chatService';
 import { Conversation, Message } from '../types/api';
-import { MessageSquare, ArrowRight, Send, User as UserIcon, Loader2, Search, ArrowLeft, Package } from 'lucide-react';
+import { MessageSquare, Send, User as UserIcon, Loader2, Search, ArrowLeft, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
@@ -63,7 +63,7 @@ export function Inbox() {
         }
     };
 
-    const loadConversationDetails = async (id: number, silent = false) => {
+    const loadConversationDetails = async (id: number, _silent = false) => {
         try {
             const data = await chatService.getConversation(id);
             // Only update if we are still looking at the same conversation
@@ -288,7 +288,6 @@ export function Inbox() {
                                     {
                                         messages.map((msg, index) => {
                                             const isMe = msg.sender === user?.id;
-                                            const isSystem = !msg.sender; // Assumed system if no sender logic, or specific type
 
                                             return (
                                                 <div

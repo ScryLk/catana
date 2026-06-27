@@ -269,6 +269,8 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
             <Line
               data={element.lineData}
               isSelected={isSelected}
+              isLocked={element.locked ?? false}
+              elementPosition={element.position}
               onChange={(newData: LineData) => updateElement(element.id, { lineData: newData })}
             />
           );

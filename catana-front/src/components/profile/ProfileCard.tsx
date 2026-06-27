@@ -5,7 +5,7 @@
  */
 
 import { type FC, useState } from 'react';
-import { User, MapPin, Heart, MessageCircle, Bookmark, BookmarkCheck } from 'lucide-react';
+import { User, Heart, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ProfileCardData } from '../../types/profile';
 import { publicProfileService } from '../../services/publicProfileService';

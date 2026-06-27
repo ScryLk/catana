@@ -5,16 +5,14 @@
 
 import { type FC, useRef, useState, useCallback, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import type { CatalogElement, Position, Size } from '../../types/editor';
+import type { Position, Size } from '../../types/editor';
 import {
   viewportToCanvas,
   canvasToViewport,
-  getCombinedBounds,
   pointInBounds,
   snapPositionToGrid,
   maintainAspectRatio,
   calculateIntersection,
-  clamp,
 } from '../../utils/canvasHelpers';
 import {
   findTopElementAtPoint,
@@ -743,55 +741,6 @@ export const FigmaCanvasV2: FC = () => {
     // Resetar modo
     setMode('idle');
   }, [mode, isPanning, marquee, selection, potentialContainer, selectedElementIds, elements, pan, zoomDecimal, dragPreview, gridSize, snapEnabled]);
-
-  // Render selection box
-  const renderSelectionBox = () => {
-    const selectedElements = elements.filter((el) => selectedElementIds.includes(el.id));
-    if (selectedElements.length === 0) return null;
-
-    const bounds = getCombinedBounds(selectedElements);
-    if (!bounds) return null;
-
-    const screenPos = canvasToViewport(bounds.x, bounds.y, pan, zoomDecimal);
-    const screenSize = { width: bounds.width * zoomDecimal, height: bounds.height * zoomDecimal };
-
-    return (
-      <div
-        className="absolute pointer-events-none border-2 border-blue-500"
-        style={{
-          left: screenPos.x,
-          top: screenPos.y,
-          width: screenSize.width,
-          height: screenSize.height,
-        }}
-      >
-        {selectedElements.length === 1 &&
-          (['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as ResizeHandle[]).map((handle) => (
-            <div
-              key={handle}
-              className="absolute w-2 h-2 bg-white border border-blue-500 pointer-events-auto cursor-pointer hover:scale-125 transition-transform"
-              style={getHandleStyle(handle)}
-              onPointerDown={(e) => handleResizeHandlePointerDown(e, handle)}
-            />
-          ))}
-      </div>
-    );
-  };
-
-  const getHandleStyle = (handle: ResizeHandle): React.CSSProperties => {
-    const offset = -4;
-    const positions: Record<ResizeHandle, React.CSSProperties> = {
-      nw: { top: offset, left: offset, cursor: 'nwse-resize' },
-      n: { top: offset, left: '50%', transform: 'translateX(-50%)', cursor: 'ns-resize' },
-      ne: { top: offset, right: offset, cursor: 'nesw-resize' },
-      e: { top: '50%', right: offset, transform: 'translateY(-50%)', cursor: 'ew-resize' },
-      se: { bottom: offset, right: offset, cursor: 'nwse-resize' },
-      s: { bottom: offset, left: '50%', transform: 'translateX(-50%)', cursor: 'ns-resize' },
-      sw: { bottom: offset, left: offset, cursor: 'nesw-resize' },
-      w: { top: '50%', left: offset, transform: 'translateY(-50%)', cursor: 'ew-resize' },
-    };
-    return positions[handle];
-  };
 
   const renderMarquee = () => {
     if (!marquee.start || !marquee.current) return null;

@@ -5,7 +5,7 @@
 
 import { type FC, useRef, useState, useEffect, useCallback } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import type { CatalogElement, Position, Size } from '../../types/editor';
+import type { Position, Size } from '../../types/editor';
 import {
   viewportToCanvas,
   canvasToViewport,
@@ -13,7 +13,6 @@ import {
   getCombinedBounds,
   pointInBounds,
   snapPositionToGrid,
-  maintainAspectRatio,
   calculateIntersection,
 } from '../../utils/canvasHelpers';
 import {
@@ -26,7 +25,6 @@ import { ElementRenderer } from './ElementRenderer';
 
 // Constantes
 const DRAG_THRESHOLD = 3; // pixels
-const MIN_SIZE = 10; // tamanho mínimo para resize
 const CONTAINER_THRESHOLD = 50; // % de interseção para considerar container
 
 type ResizeHandle =
@@ -70,9 +68,6 @@ export const FigmaCanvas: FC = () => {
     toggleSelectElement,
     updateElement,
     addElement,
-    deleteElement,
-    groupElements,
-    ungroupElements,
     activeTool,
     setActiveTool,
     interactionMode,
@@ -121,8 +116,8 @@ export const FigmaCanvas: FC = () => {
 
       const canvasPos = viewportToCanvas(e.clientX, e.clientY, pan, zoomDecimal);
 
-      // Pan com espaço ou modo pan
-      if (e.code === 'Space' || interactionMode === 'pan') {
+      // Pan com modo pan
+      if (interactionMode === 'pan') {
         setIsPanning(true);
         setPanStart({ x: e.clientX, y: e.clientY });
         return;

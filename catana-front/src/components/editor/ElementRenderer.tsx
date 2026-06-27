@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import type { CatalogElement, LineData, ImageData } from '../../types/editor';
+import type { CatalogElement, LineData } from '../../types/editor';
 import type { Camera, ViewportRect } from '../../utils/lineCoordinates';
 import { QRCode } from './elements/QRCode';
 import { LineFigma } from './elements/LineFigma';
@@ -286,8 +286,9 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
       const strokeCap = lineData.cap || 'round';
       const startArrow = lineData.startArrow || 'none';
       const endArrow = lineData.endArrow || 'none';
-      const arrowSizeMap = { small: 8, medium: 12, large: 16 };
-      const arrowSizePx = arrowSizeMap[lineData.arrowSize] || 12;
+      const arrowSizeMap: Record<'small' | 'medium' | 'large', number> = { small: 8, medium: 12, large: 16 };
+      const arrowSizeKey = lineData.arrowSize as 'small' | 'medium' | 'large' | undefined;
+      const arrowSizePx = (arrowSizeKey && arrowSizeMap[arrowSizeKey]) || 12;
 
       // Dash pattern
       let dashArray = undefined;

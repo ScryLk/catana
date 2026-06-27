@@ -78,16 +78,16 @@ export const Categories: FC = () => {
   };
 
   const getRootCategories = () => {
-    return categories.filter((cat) => !cat.parentId);
+    return categories.filter((cat) => !cat.parent);
   };
 
   const getSubcategories = (parentId: string) => {
-    return categories.filter((cat) => cat.parentId === parentId);
+    return categories.filter((cat) => cat.parent === parentId);
   };
 
   const getCategoryPath = (category: Category): string => {
-    if (!category.parentId) return category.name;
-    const parent = categories.find((cat) => cat.id === category.parentId);
+    if (!category.parent) return category.name;
+    const parent = categories.find((cat) => cat.id === category.parent);
     return parent ? `${getCategoryPath(parent)} > ${category.name}` : category.name;
   };
 
@@ -201,7 +201,7 @@ export const Categories: FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                 {category.description}
               </p>
-              {category.parentId && (
+              {category.parent && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   📁 {getCategoryPath(category)}
                 </p>

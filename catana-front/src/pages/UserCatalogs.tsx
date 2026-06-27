@@ -33,7 +33,7 @@ export const UserCatalogs: FC = () => {
     const [showImportModal, setShowImportModal] = useState(false);
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [activeSedeId, setActiveSedeId] = useState<number | null>(null);
-    const [isNavigating, setIsNavigating] = useState(false);
+    const [, setIsNavigating] = useState(false);
 
     useEffect(() => {
         const storedSede = localStorage.getItem('active_sede');

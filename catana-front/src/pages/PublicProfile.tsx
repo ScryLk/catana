@@ -14,14 +14,10 @@ import {
   Bookmark,
   BookmarkCheck,
   Eye,
-  Calendar,
   Grid,
-  TrendingUp,
   Share2,
-  MoreVertical,
   Loader2,
   ArrowLeft,
-  ExternalLink,
 } from 'lucide-react';
 import { publicProfileService } from '../services/publicProfileService';
 import type { PublicProfile, PublicCatalog } from '../types/profile';

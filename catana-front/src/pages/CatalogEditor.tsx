@@ -1,11 +1,8 @@
 import { type FC, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { EditorHeader } from '../components/editor/EditorHeader';
 import { FigmaHeader } from '../components/editor/FigmaHeader';
-import { PhotoshopToolbar } from '../components/editor/PhotoshopToolbar';
 import { FigmaToolbar } from '../components/editor/FigmaToolbar';
 import { CompactPageIndicator } from '../components/editor/CompactPageIndicator';
-import { InfiniteCanvas } from '../components/editor/InfiniteCanvas';
 import { FigmaCanvasV2 as FigmaCanvas } from '../components/editor/FigmaCanvasV2';
 import { PDFPreviewModal } from '../components/editor/PDFPreviewModal';
 import { ExportModal } from '../components/editor/ExportModal';
@@ -49,7 +46,6 @@ const CatalogEditorContent: FC = () => {
     toggleSnapToGrid,
     undo,
     redo,
-    currentPageId,
     setCatalogName,
     resetEditor,
     importPages

@@ -14,7 +14,6 @@ import type {
   ValidationWarning,
   ImportPreview,
   ImportOptions,
-  ImportResult,
 } from '../types/catalogIO';
 
 /**
@@ -318,7 +317,7 @@ export function generateImportPreview(
  */
 export function importCatalog(
   schema: CatalogExportSchema,
-  options?: ImportOptions
+  _options?: ImportOptions
 ): {
   pages: CatalogPage[];
   catalogName: string;

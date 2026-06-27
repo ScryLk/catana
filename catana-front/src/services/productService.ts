@@ -1,12 +1,25 @@
 import api from './api';
 import type { ProductData } from '../types/editor';
 
+// Informações de dropshipping (JSONField flexível no backend)
+export interface DropshippingInfo {
+  weight?: string;
+  width?: string;
+  height?: string;
+  depth?: string;
+  supplier?: string;
+  supplierSku?: string;
+  leadTime?: string;
+  shippingCost?: string;
+}
+
 // Extended Product interface for the service
 export interface Product extends Omit<ProductData, 'image'> {
   id: number;
   image: number | null;
   image_url: string | null;
   stock: number;
+  dropshipping_info?: DropshippingInfo;
   created_at: string;
   updated_at: string;
 }

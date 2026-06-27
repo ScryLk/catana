@@ -133,8 +133,6 @@ export const Line: FC<LineProps> = ({
 
     if (!svgRef.current?.parentElement) return;
 
-    const padding = 20;
-
     // ⚡ NOVA ABORDAGEM: Trabalhar APENAS com coordenadas ABSOLUTAS
     // element.position é IMUTÁVEL - NUNCA muda durante resize
 

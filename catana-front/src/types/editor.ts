@@ -156,6 +156,7 @@ export interface ProductData {
   sku?: string;
   code?: string;
   category?: string;
+  isNew?: boolean;
 }
 
 export interface HighlightBannerData {
@@ -335,17 +336,18 @@ export interface LineData {
  */
 export interface ImageData {
   // 📍 Source da imagem
-  src: string; // URL ou path da imagem
+  src?: string; // URL ou path da imagem
   url?: string; // Alias/URL alternativa da imagem
   alt?: string; // Texto alternativo
 
   // 🎨 Estilo visual
-  opacity: number; // 0 a 1
-  borderRadius: number; // px
-  objectFit: 'contain' | 'cover' | 'fill'; // Como a imagem preenche o box
+  opacity?: number; // 0 a 1
+  borderRadius?: number; // px
+  objectFit?: 'contain' | 'cover' | 'fill'; // Como a imagem preenche o box
+  fit?: 'contain' | 'cover' | 'fill'; // Alias de objectFit usado em alguns geradores
 
   // 🔒 Proporção
-  aspectRatioLocked: boolean; // Manter proporção original
+  aspectRatioLocked?: boolean; // Manter proporção original
   originalWidth?: number; // Largura original da imagem (para cálculos)
   originalHeight?: number; // Altura original da imagem (para cálculos)
 

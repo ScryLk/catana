@@ -1,8 +1,7 @@
 import { type FC } from 'react';
-import { FiRotateCcw, FiRotateCw, FiAlignLeft, FiAlignCenter, FiAlignRight, FiAlignJustify, FiZoomIn, FiZoomOut, FiMaximize2, FiGrid, FiEye, FiSave, FiLayers, FiCopy, FiActivity, FiDownload } from 'react-icons/fi';
+import { FiRotateCcw, FiRotateCw, FiAlignLeft, FiAlignCenter, FiAlignRight, FiAlignJustify, FiZoomIn, FiZoomOut, FiMaximize2, FiGrid, FiEye, FiSave, FiLayers, FiCopy, FiDownload } from 'react-icons/fi';
 import { useEditorStore } from '../../store/editorStore';
 import { PageNavigation } from './PageNavigation';
-import { getDefaultElementData } from '../../utils/elementDefaults';
 
 interface Props {
   onShowPreview: () => void;
@@ -24,7 +23,6 @@ export const EditorToolbar: FC<Props> = ({ onShowPreview, onSaveComponent }) => 
     groupElements,
     ungroupElements,
     getCurrentPage,
-    addElement,
     exportCatalogToJSON
   } = useEditorStore();
   const canUndo = historyIndex > 0;
@@ -45,24 +43,6 @@ export const EditorToolbar: FC<Props> = ({ onShowPreview, onSaveComponent }) => 
     if (canUngroup && selectedElementId) {
       ungroupElements(selectedElementId);
     }
-  };
-
-  // 🧪 TESTE: Adicionar linha de teste
-  const handleAddTestLine = () => {
-    const lineData = getDefaultElementData('line');
-
-    const testLine = {
-      type: 'line' as const,
-      position: { x: 100, y: 100 }, // Posição inicial no canvas
-      size: { width: 200, height: 100 },
-      zIndex: Date.now(),
-      visible: true,
-      locked: false,
-      ...lineData,
-    };
-
-    addElement(testLine);
-    console.log('🧪 [TEST] Linha de teste adicionada:', testLine);
   };
 
   return (

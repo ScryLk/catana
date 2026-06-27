@@ -271,7 +271,7 @@ function pointToLineDistance(
 export const findTopElementAtPoint = (
   point: Position,
   elements: CatalogElement[],
-  zoom: number
+  _zoom: number
 ): CatalogElement | null => {
   // Ordenar por z-index decrescente (do topo para baixo)
   const sorted = sortByZIndex(elements).reverse();

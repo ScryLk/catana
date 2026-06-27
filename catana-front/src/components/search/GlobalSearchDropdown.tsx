@@ -1,14 +1,14 @@
 import { FC, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { globalSearchService, type GlobalSearchResults } from '@/services/globalSearchService';
-import { User, BookOpen, Package, Search, Loader2, TrendingUp } from 'lucide-react';
+import { User, BookOpen, Package, Search, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface GlobalSearchDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   inputValue: string;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export const GlobalSearchDropdown: FC<GlobalSearchDropdownProps> = ({
@@ -22,7 +22,7 @@ export const GlobalSearchDropdown: FC<GlobalSearchDropdownProps> = ({
   const [results, setResults] = useState<GlobalSearchResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const debounceTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Criar lista plana de todos os itens para navegação por teclado
   const getAllItems = useCallback(() => {
@@ -199,7 +199,6 @@ export const GlobalSearchDropdown: FC<GlobalSearchDropdownProps> = ({
     );
   }
 
-  const items = getAllItems();
   let currentItemIndex = 0;
 
   return (

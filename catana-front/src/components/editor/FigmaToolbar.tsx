@@ -128,7 +128,7 @@ export const FigmaToolbar: FC<Props> = ({ onSaveComponent }) => {
       const defaultData = getDefaultElementData('line');
       console.log('[FigmaToolbar] defaultData:', defaultData);
       const newElement = {
-        type: 'line',
+        type: 'line' as const,
         position: { x: 100, y: 100 },
         size: getDefaultElementSize('line'),
         style: {},
@@ -146,7 +146,7 @@ export const FigmaToolbar: FC<Props> = ({ onSaveComponent }) => {
       const defaultData = getDefaultElementData('qr-code');
       console.log('[FigmaToolbar] QR Code defaultData:', defaultData);
       const newElement = {
-        type: 'qr-code',
+        type: 'qr-code' as const,
         position: { x: 200, y: 200 },
         size: getDefaultElementSize('qr-code'),
         style: {},

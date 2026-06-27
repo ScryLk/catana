@@ -1,7 +1,6 @@
 import { type FC, useState, useEffect } from 'react';
 import { FiPackage, FiSearch, FiX, FiCheck, FiShoppingBag } from 'react-icons/fi';
 import { productService, type ProductReference } from '../../services/productService';
-import { useAuthStore } from '../../store/authStore';
 
 interface ProductSelectorModalProps {
   isOpen: boolean;
@@ -23,7 +22,6 @@ export const ProductSelectorModal: FC<ProductSelectorModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductReference | null>(null);
-  const { user } = useAuthStore();
 
   const loadProducts = async () => {
     try {
