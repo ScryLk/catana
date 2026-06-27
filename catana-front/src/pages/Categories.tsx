@@ -5,23 +5,8 @@ import { FiPlus, FiEdit2, FiTrash2, FiFolder, FiChevronRight, FiChevronDown, FiL
 import { CategoryModal } from '../components/products/CategoryModal';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { categoryService, Category as APICategory } from '../services/categoryService';
+import { categoryService, Category } from '../services/categoryService';
 import { LoadingScreen } from '../components/common/LoadingScreen';
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  parentId: string | null;
-}
-
-// Convert API Category to local Category
-const convertAPICategory = (apiCat: APICategory): Category => ({
-  id: apiCat.id,
-  name: apiCat.name,
-  description: apiCat.description || '',
-  parentId: apiCat.parent,
-});
 
 export const Categories: FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -40,7 +25,7 @@ export const Categories: FC = () => {
     setIsLoading(true);
     try {
       const data = await categoryService.getCategories();
-      setCategories(data.map(convertAPICategory));
+      setCategories(data);
     } catch (error) {
       console.error('Error fetching categories:', error);
     } finally {
@@ -48,14 +33,14 @@ export const Categories: FC = () => {
     }
   };
 
-  const handleSaveCategory = async (categoryData: Omit<Category, 'id'>) => {
+  const handleSaveCategory = async (categoryData: { name: string; description: string; parent: string | null }) => {
     try {
       if (editingCategory) {
         // Update existing category
         await categoryService.updateCategory(editingCategory.id, {
           name: categoryData.name,
           description: categoryData.description || undefined,
-          parent: categoryData.parentId || null,
+          parent: categoryData.parent || null,
         });
         setEditingCategory(undefined);
       } else {
@@ -63,7 +48,7 @@ export const Categories: FC = () => {
         await categoryService.createCategory({
           name: categoryData.name,
           description: categoryData.description || undefined,
-          parent: categoryData.parentId || null,
+          parent: categoryData.parent || null,
         });
       }
       // Refresh categories

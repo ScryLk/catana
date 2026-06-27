@@ -13,21 +13,19 @@ import {
   SPACING,
   DEFAULT_LAYOUT,
   TYPOGRAPHY_RULES,
-  IMAGE_RULES,
   GROUP_RULES,
   applyRulesToElement,
   validateElement,
-  normalizeSpacing,
   calculateNextY,
   updatePositionContext,
   type PageRules,
   type PositionContext,
   type ValidationResult,
-  type ElementRole,
+  type TextRole,
   type LayoutConfig
 } from '../types/layoutRules';
 
-import type { EditorElement } from '../types/editor';
+import type { CatalogElement } from '../types/editor';
 
 // ============================================
 // CONTEXTO DE LAYOUT
@@ -69,7 +67,7 @@ export function createLayoutContext(pageSize: 'A4' | 'Letter' = 'A4'): LayoutEng
 export function processElement(
   element: any,
   context: LayoutEngineContext
-): { element: EditorElement; context: LayoutEngineContext; validation: ValidationResult } {
+): { element: CatalogElement; context: LayoutEngineContext; validation: ValidationResult } {
   // 1. Validar elemento
   const validation = validateElement(element);
 
@@ -133,7 +131,7 @@ function estimateElementHeight(element: any): number {
   // Estimar baseado no tipo
   switch (element.type) {
     case 'text': {
-      const role = element.role as ElementRole;
+      const role = element.role as TextRole;
       const typoRules = TYPOGRAPHY_RULES[role] || TYPOGRAPHY_RULES.body;
       const fontSize = element.style?.fontSize || typoRules.fontSize;
       const lineHeight = element.style?.lineHeight || typoRules.lineHeight;
@@ -203,7 +201,7 @@ function estimateElementHeight(element: any): number {
 export function processGroup(
   group: any,
   context: LayoutEngineContext
-): { element: EditorElement; context: LayoutEngineContext; validation: ValidationResult } {
+): { element: CatalogElement; context: LayoutEngineContext; validation: ValidationResult } {
   // Aplicar regras de grupo
   const groupRole = group.role || 'section';
   const groupRules = GROUP_RULES[groupRole] || GROUP_RULES.section;
@@ -310,12 +308,12 @@ export function processPage(
   elements: any[],
   pageSize: 'A4' | 'Letter' = 'A4'
 ): {
-  elements: EditorElement[];
+  elements: CatalogElement[];
   validations: ValidationResult[];
   context: LayoutEngineContext;
 } {
   let context = createLayoutContext(pageSize);
-  const processedElements: EditorElement[] = [];
+  const processedElements: CatalogElement[] = [];
   const validations: ValidationResult[] = [];
 
   elements.forEach(element => {
@@ -343,7 +341,7 @@ export function processPage(
  * Converte elementos com layout relativo para absoluto
  * (útil para o editor que trabalha com posicionamento absoluto)
  */
-export function convertToAbsoluteLayout(elements: any[]): EditorElement[] {
+export function convertToAbsoluteLayout(elements: any[]): CatalogElement[] {
   const { elements: processed } = processPage(elements);
   return processed;
 }

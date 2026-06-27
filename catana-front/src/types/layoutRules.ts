@@ -447,17 +447,4 @@ export function applyRulesToElement(element: any): any {
   return enhanced;
 }
 
-// ============================================
-// EXPORTS
-// ============================================
-
-export type {
-  PageRules,
-  LayoutConfig,
-  TypographyRule,
-  ElementSpacing,
-  BaseElementRules,
-  ImageRules,
-  PositionContext,
-  GroupRules
-};
+// Os tipos acima ja sao exportados na propria declaracao (export interface).

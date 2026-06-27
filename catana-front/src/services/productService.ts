@@ -259,6 +259,23 @@ class ProductService {
       reader.readAsText(file);
     });
   }
+
+  /**
+   * Bulk import products via dedicated endpoint.
+   * @param products List of product payloads (already cleaned of UI-only fields)
+   * @param options Extra context (sede/organization)
+   * @returns Import summary
+   */
+  async bulkImport(
+    products: Record<string, unknown>[],
+    options?: { sede?: number; organization?: number }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    const response = await api.post<{ success: number; failed: number; errors: string[] }>(
+      '/api/products/bulk_import/',
+      { products, ...options }
+    );
+    return response.data;
+  }
 }
 
 export const productService = new ProductService();

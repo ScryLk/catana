@@ -99,6 +99,49 @@ export interface ElementStyle {
   startArrow?: boolean;
   endArrow?: boolean;
   arrowSize?: number;
+  // Sombra CSS bruta (quando precisar de mais controle que o flag `shadow`)
+  boxShadow?: string;
+}
+
+// Dados de texto de um elemento de texto.
+export interface TextData {
+  content: string;
+  text?: string; // alias legado usado em validacoes
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  textColor?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  textDecoration?: 'none' | 'underline' | 'line-through';
+}
+
+// Configuracao de layout interno de um elemento (colunas, espacamento, dimensionamento).
+export interface ElementLayout {
+  columns?: number;
+  padding?: number;
+  alignment?: 'left' | 'center' | 'right';
+  widthMode?: 'fixed' | 'auto';
+  heightMode?: 'fixed' | 'auto';
+}
+
+// Configuracao de branding por elemento (templates parametrizaveis).
+export interface ElementBranding {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  backgroundType?: 'solid' | 'gradient' | 'image';
+  gradientStart?: string;
+  gradientEnd?: string;
+  highlightPrice?: boolean;
+  priceHighlightColor?: string;
+  showBorder?: boolean;
+  showShadow?: boolean;
 }
 
 // Data structures for specific element types
@@ -111,6 +154,7 @@ export interface ProductData {
   specs?: Array<{ label: string; value: string }>;
   badge?: string;
   sku?: string;
+  code?: string;
   category?: string;
 }
 
@@ -187,18 +231,18 @@ export type QRCodeDestinationType = 'catalog' | 'product' | 'profile' | 'url';
 
 export interface QRCodeData {
   // Tipo de destino
-  destinationType: QRCodeDestinationType;
+  destinationType?: QRCodeDestinationType;
 
   // Dados baseados no tipo
-  data: string; // URL final gerada ou URL customizada
+  data?: string; // URL final gerada ou URL customizada
   catalogId?: number; // Se tipo = 'catalog'
   productId?: number; // Se tipo = 'product'
   profileId?: number; // Se tipo = 'profile'
   customUrl?: string; // Se tipo = 'url'
 
   // Personalização visual
-  color: string; // Cor do QR Code
-  backgroundColor: string; // Cor de fundo
+  color?: string; // Cor do QR Code
+  backgroundColor?: string; // Cor de fundo
   logo?: string; // URL do logo central
   logoSize?: number; // Tamanho do logo (px)
   errorCorrection?: 'L' | 'M' | 'Q' | 'H'; // Nível de correção de erro
@@ -292,6 +336,7 @@ export interface LineData {
 export interface ImageData {
   // 📍 Source da imagem
   src: string; // URL ou path da imagem
+  url?: string; // Alias/URL alternativa da imagem
   alt?: string; // Texto alternativo
 
   // 🎨 Estilo visual
@@ -364,6 +409,10 @@ export interface CatalogElement {
   groupId?: string;
   isGroup?: boolean;
   children?: string[];
+  opacity?: number;
+  branding?: ElementBranding;
+  layout?: ElementLayout;
+  textData?: TextData;
   // Image URL (for type 'image')
   imageUrl?: string;
   // Specific data based on element type

@@ -98,6 +98,7 @@ export type MediaType = 'image' | 'video' | 'document' | 'other';
 export interface MediaFolder {
   id: number;
   name: string;
+  parent: number | null;
   created_at: string;
   created_by: number;
 }
@@ -105,6 +106,7 @@ export interface MediaFolder {
 export interface Media {
   id: number;
   file: string;
+  file_url: string;
   name: string;
   description: string | null;
   media_type: MediaType;

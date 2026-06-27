@@ -385,6 +385,7 @@ function convertElementFromExport(
     position: { ...exportElement.position },
     size: { ...exportElement.size },
     pageId,
+    style: exportElement.style || {},
     zIndex: exportElement.zIndex ?? 0,
     visible: exportElement.visible ?? true,
     locked: exportElement.locked ?? false,
