@@ -560,10 +560,17 @@ class MediaViewSet(viewsets.ModelViewSet):
         videos_count = media_qs.filter(media_type='video').count()
         documents_count = media_qs.filter(media_type='document').count()
         
-        # Calculate size (this is heavier, might want to optimize or cache)
-        total_size = media_qs.aggregate(Sum('size'))['size__sum'] or 0
-        
-        # Format size
+        # COR-02: o model Media nao tem campo `size`; somamos o tamanho dos
+        # arquivos em si (o aggregate Sum('size') anterior quebrava em runtime).
+        total_size = 0
+        for media in media_qs:
+            try:
+                if media.file:
+                    total_size += media.file.size
+            except Exception:
+                # Arquivo pode estar ausente no storage; ignora.
+                pass
+
         def format_size(size):
             for unit in ['B', 'KB', 'MB', 'GB']:
                 if size < 1024:
@@ -571,7 +578,8 @@ class MediaViewSet(viewsets.ModelViewSet):
                 size /= 1024
             return f"{size:.1f} TB"
 
-        favorites_count = media_qs.filter(is_favorite=True).count()
+        # Media nao tem campo is_favorite; nao ha favoritos a contar.
+        favorites_count = 0
 
         return Response({
             'total_files': total_files,
@@ -583,41 +591,6 @@ class MediaViewSet(viewsets.ModelViewSet):
             'total_size_formatted': format_size(total_size),
             'favorites_count': favorites_count
         })
-        folders_count = folder_qs.count()
-
-        # Calculate total size in python since we don't have a size field in DB
-        total_size = 0
-        for media in media_qs:
-            try:
-                if media.file:
-                    total_size += media.file.size
-            except Exception:
-                # File might be missing or other error
-                pass
-
-        # Determine size formatted
-        if total_size < 1024 * 1024:
-            total_size_formatted = f"{total_size / 1024:.2f} KB"
-        else:
-            total_size_formatted = f"{total_size / (1024 * 1024):.2f} MB"
-            
-        images_count = media_qs.filter(media_type='image').count()
-        videos_count = media_qs.filter(media_type='video').count()
-        documents_count = media_qs.filter(media_type='document').count()
-
-        favorites_count = 0
-
-        data = {
-            'total_files': total_files,
-            'folders_count': folders_count,
-            'total_size': total_size,
-            'total_size_formatted': total_size_formatted,
-            'images_count': images_count,
-            'videos_count': videos_count,
-            'documents_count': documents_count,
-            'favorites_count': favorites_count
-        }
-        return Response(data)
 
 class ThemeViewSet(viewsets.ModelViewSet):
     queryset = Theme.objects.all()
