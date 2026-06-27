@@ -558,6 +558,101 @@ class CatalogViewSet(viewsets.ModelViewSet):
             saved = True
         return Response({'saved': saved, 'count': catalog.saves.count()})
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def save_content(self, request, pk=None):
+        """
+        INC-01: salva o conteúdo do editor (páginas/elementos) de forma
+        transacional e idempotente. Recria Page/Component/PageComponent a partir
+        do payload, sem deixar registros órfãos.
+
+        Payload esperado:
+        {
+          "pages": [
+            {
+              "order": 0,
+              "background_image": <media_id|null>,
+              "elements": [
+                { "type": "text-title", "position": {"x":..,"y":..},
+                  "size": {"width":..,"height":..}, "zIndex": 0, ...resto do JSON }
+              ]
+            }
+          ]
+        }
+        """
+        from django.db import transaction
+
+        catalog = self.get_object()
+        pages_payload = request.data.get('pages', [])
+        if not isinstance(pages_payload, list):
+            return Response(
+                {'error': 'O campo "pages" deve ser uma lista.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        def to_component_type(element_type):
+            t = (element_type or '').lower()
+            if t.startswith('text') or t in ('divider', 'footer'):
+                return 'text'
+            if t.startswith('product'):
+                return 'product'
+            return 'image'
+
+        def as_int(value, default=0):
+            try:
+                return int(round(float(value)))
+            except (TypeError, ValueError):
+                return default
+
+        with transaction.atomic():
+            # Limpa o conteúdo atual do catálogo (componentes não reutilizáveis
+            # ficam órfãos se não removidos explicitamente).
+            existing_pages = Page.objects.filter(catalog=catalog)
+            existing_pc = PageComponent.objects.filter(page__in=existing_pages)
+            component_ids = list(existing_pc.values_list('component_id', flat=True))
+            existing_pc.delete()
+            Component.objects.filter(id__in=component_ids, is_reusable=False).delete()
+            existing_pages.delete()
+
+            created_pages = 0
+            created_elements = 0
+            for page_index, page_data in enumerate(pages_payload):
+                page = Page.objects.create(
+                    catalog=catalog,
+                    order=as_int(page_data.get('order'), page_index),
+                    background_image_id=page_data.get('background_image'),
+                )
+                created_pages += 1
+
+                for elem_index, element in enumerate(page_data.get('elements', [])):
+                    position = element.get('position', {}) or {}
+                    size = element.get('size', {}) or {}
+                    component = Component.objects.create(
+                        name=element.get('name') or element.get('type') or 'elemento',
+                        component_type=to_component_type(element.get('type')),
+                        content=element,
+                        is_reusable=False,
+                        organization=catalog.organization,
+                        sede=catalog.sede,
+                        created_by=request.user,
+                    )
+                    PageComponent.objects.create(
+                        page=page,
+                        component=component,
+                        position_x=as_int(position.get('x')),
+                        position_y=as_int(position.get('y')),
+                        width=as_int(size.get('width')),
+                        height=as_int(size.get('height')),
+                        layer=as_int(element.get('zIndex'), elem_index),
+                    )
+                    created_elements += 1
+
+        return Response({
+            'status': 'ok',
+            'catalog': catalog.id,
+            'pages': created_pages,
+            'elements': created_elements,
+        })
+
 class PageViewSet(viewsets.ModelViewSet):
     queryset = Page.objects.all()
     serializer_class = PageSerializer

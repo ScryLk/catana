@@ -21,9 +21,12 @@ import {
   alignElements,
 } from '../utils/alignmentHelpers';
 import { loadImportedCatalog, isImportedCatalog } from '../services/catalogLoader.service';
+import { catalogService } from '../services/catalogService';
+import { toast } from 'sonner';
 
 const CatalogEditorContent: FC = () => {
   const location = useLocation();
+  const [currentCatalogId, setCurrentCatalogId] = useState<number | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showPagesManager, setShowPagesManager] = useState(false);
@@ -63,6 +66,7 @@ const CatalogEditorContent: FC = () => {
     } else if (catalogId) {
       // Verificar se é um catálogo importado (do backend)
       const numericCatalogId = parseInt(catalogId);
+      setCurrentCatalogId(numericCatalogId);
 
       isImportedCatalog(numericCatalogId)
         .then(isImported => {
@@ -104,6 +108,20 @@ const CatalogEditorContent: FC = () => {
   const selectedElements = currentPage?.elements.filter(el =>
     selectedElementIds.includes(el.id)
   ) || [];
+
+  // INC-01: persiste o conteúdo do editor no backend.
+  const handleSaveContent = async () => {
+    if (!currentCatalogId) {
+      toast.error('Abra um catálogo do servidor para poder salvar o conteúdo.');
+      return;
+    }
+    try {
+      const result = await catalogService.saveCatalogContent(currentCatalogId, pages);
+      toast.success(`Conteúdo salvo: ${result.pages} página(s), ${result.elements} elemento(s).`);
+    } catch {
+      toast.error('Falha ao salvar o conteúdo no servidor.');
+    }
+  };
 
   // Alignment handlers
   const handleAlign = (alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
@@ -184,6 +202,7 @@ const CatalogEditorContent: FC = () => {
         <FigmaHeader
           onShowPreview={() => { setShowPDFPreview(true); }}
           onDownloadPDF={handleDownloadPDF}
+          onSave={handleSaveContent}
         />
       )}
 
