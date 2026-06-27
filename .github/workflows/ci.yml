@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      # Valores de teste; em produção vêm de secrets/ambiente.
+      DATABASE_URL: "sqlite:///ci.db"
+      SECRET_KEY: "ci-test-secret-key-not-used-in-production"
+      DEBUG: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        working-directory: catana-back
+        run: pip install -r requirements.txt
+      - name: Django check
+        working-directory: catana-back
+        run: python manage.py check
+      - name: Tests
+        working-directory: catana-back
+        run: python manage.py test
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: catana-front/package-lock.json
+      - name: Install deps
+        working-directory: catana-front
+        run: npm ci
+      - name: Build (tsc -b + vite build)
+        working-directory: catana-front
+        run: npm run build
+      - name: Lint
+        working-directory: catana-front
+        # Nao bloqueante: ha divida de lint pre-existente (no-explicit-any etc.)
+        # a ser reduzida gradualmente. Mantido visivel no CI.
+        continue-on-error: true
+        run: npm run lint
