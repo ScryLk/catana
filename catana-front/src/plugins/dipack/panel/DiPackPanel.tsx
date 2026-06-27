@@ -44,7 +44,7 @@ export const DiPackPanel: FC = () => {
             const pagesAfter = useEditorStore.getState().pages;
             const targetPage = pagesAfter[pagesAfter.length - 1];
 
-            console.log('[DiPackPanel] Adicionando elemento à página:', targetPage.id, targetPage.name);
+            import.meta.env.DEV && console.log('[DiPackPanel] Adicionando elemento à página:', targetPage.id, targetPage.name);
 
             addElement({
               type: type as any,
@@ -74,18 +74,18 @@ export const DiPackPanel: FC = () => {
     let globalPageCount = 3;
 
     for (const cat of categories) {
-      console.log(`[DiPackPanel] Filtrando categoria: '${cat.name}'`);
-      console.log(`[DiPackPanel] Total produtos disponíveis: ${allProducts.length}`);
+      import.meta.env.DEV && console.log(`[DiPackPanel] Filtrando categoria: '${cat.name}'`);
+      import.meta.env.DEV && console.log(`[DiPackPanel] Total produtos disponíveis: ${allProducts.length}`);
 
       // Debug first few products categories
-      allProducts.slice(0, 3).forEach(p => console.log(`[DiPackPanel] Prod Sample Cat: '${p.category}'`));
+      allProducts.slice(0, 3).forEach(p => import.meta.env.DEV && console.log(`[DiPackPanel] Prod Sample Cat: '${p.category}'`));
 
       const catProducts = allProducts.filter(p => {
         // Robust comparison avoiding whitespace issues
         return p.category?.trim() === cat.name.trim();
       });
 
-      console.log(`[DiPackPanel] Produtos encontrados para ${cat.name}: ${catProducts.length}`);
+      import.meta.env.DEV && console.log(`[DiPackPanel] Produtos encontrados para ${cat.name}: ${catProducts.length}`);
 
       if (cat.intro) await addWithDelay(cat.intro, {}, delay);
 
@@ -97,7 +97,7 @@ export const DiPackPanel: FC = () => {
           // Debug data flow
           const chunkCopy = JSON.parse(JSON.stringify(chunk));
 
-          console.log(`[DiPackPanel] ADICIONANDO CHUNK DE ${chunkCopy.length} ITENS:`, chunkCopy);
+          import.meta.env.DEV && console.log(`[DiPackPanel] ADICIONANDO CHUNK DE ${chunkCopy.length} ITENS:`, chunkCopy);
 
           await addWithDelay(cat.template, {
             products: chunkCopy,

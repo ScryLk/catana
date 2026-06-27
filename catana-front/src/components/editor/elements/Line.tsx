@@ -165,7 +165,7 @@ export const Line: FC<LineProps> = ({
       elementPosition: { ...elementPosition }, // Position FIXA (NUNCA muda)
     };
 
-    console.log('🎯 [RESIZE START - NOVA ABORDAGEM]', {
+    import.meta.env.DEV && console.log('🎯 [RESIZE START - NOVA ABORDAGEM]', {
       handle,
       elementPosition, // FIXO
       startAbsolute,
@@ -295,7 +295,7 @@ export const Line: FC<LineProps> = ({
             },
           };
 
-          console.log('📍 [RESIZE MOVE - NOVA ABORDAGEM]', {
+          import.meta.env.DEV && console.log('📍 [RESIZE MOVE - NOVA ABORDAGEM]', {
             mouseAbsolute,
             anchorPointAbsolute: snapshot.anchorPointAbsolute, // FIXO
             elementPosition: snapshot.elementPosition, // FIXO
@@ -357,7 +357,7 @@ export const Line: FC<LineProps> = ({
 
       // Commit único
       if (previewLine) {
-        console.log('✅ [RESIZE END - COMMIT]', {
+        import.meta.env.DEV && console.log('✅ [RESIZE END - COMMIT]', {
           elementPosition,
           finalLine: { start: previewLine.start, end: previewLine.end },
           wasResizing,

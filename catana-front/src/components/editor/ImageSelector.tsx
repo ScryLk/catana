@@ -15,7 +15,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
   onImageSelect,
   label = 'Imagem',
 }) => {
-  console.log('[ImageSelector] Componente montado');
+  import.meta.env.DEV && console.log('[ImageSelector] Componente montado');
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'library' | 'upload' | 'url'>('library');
   const [imageUrl, setImageUrl] = useState('');
@@ -34,7 +34,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
     try {
       setLoadingMedia(true);
       setLoadError(null);
-      console.log('[ImageSelector] Carregando imagens do /media...');
+      import.meta.env.DEV && console.log('[ImageSelector] Carregando imagens do /media...');
 
       // Usar endpoint otimizado para o editor
       const images = await mediaService.getImagesForEditor({
@@ -43,7 +43,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
         limit: 50, // Carregar mais imagens por vez
       });
 
-      console.log('[ImageSelector] Imagens carregadas:', images);
+      import.meta.env.DEV && console.log('[ImageSelector] Imagens carregadas:', images);
       setMediaImages(images);
     } catch (error: any) {
       console.error('[ImageSelector] Erro ao carregar imagens:', error);
@@ -72,9 +72,9 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
 
   const loadFolders = async () => {
     try {
-      console.log('[ImageSelector] Carregando pastas...');
+      import.meta.env.DEV && console.log('[ImageSelector] Carregando pastas...');
       const allFolders = await mediaService.getFolders();
-      console.log('[ImageSelector] Pastas carregadas:', allFolders);
+      import.meta.env.DEV && console.log('[ImageSelector] Pastas carregadas:', allFolders);
       // Filtrar apenas pastas da pasta atual
       const currentFolders = allFolders.filter(f => f.parent === currentFolder);
       setFolders(currentFolders);
@@ -138,7 +138,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
   // Carregar imagens quando modal abrir ou quando mudar de pasta/busca
   useEffect(() => {
     if (showModal && activeTab === 'library') {
-      console.log('[ImageSelector] Modal aberto, carregando dados...');
+      import.meta.env.DEV && console.log('[ImageSelector] Modal aberto, carregando dados...');
       loadMediaImages();
       loadFolders();
     }
@@ -164,7 +164,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
           {/* Select Button */}
           <button
             onClick={() => {
-              console.log('[ImageSelector] Botão clicado, abrindo modal...');
+              import.meta.env.DEV && console.log('[ImageSelector] Botão clicado, abrindo modal...');
               setShowModal(true);
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-xl hover:from-primary-600 hover:to-accent-600 transition-all shadow-soft hover:shadow-medium font-medium"

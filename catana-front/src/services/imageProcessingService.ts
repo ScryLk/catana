@@ -10,12 +10,12 @@ class ImageProcessingService {
    */
   async removeBackground(imageUrl: string): Promise<string> {
     try {
-      console.log('[ImageProcessingService] Iniciando remoção de fundo para:', imageUrl);
+      import.meta.env.DEV && console.log('[ImageProcessingService] Iniciando remoção de fundo para:', imageUrl);
 
       // Configuração opcional pode ser passada aqui
       const config = {
         progress: (key: string, current: number, total: number) => {
-          console.log(`[ImageProcessingService] Progresso (${key}): ${current}/${total}`);
+          import.meta.env.DEV && console.log(`[ImageProcessingService] Progresso (${key}): ${current}/${total}`);
         },
         debug: true
       };
@@ -24,7 +24,7 @@ class ImageProcessingService {
       const processedUrl = URL.createObjectURL(blob);
 
       this.isModelLoaded = true;
-      console.log('[ImageProcessingService] Fundo removido com sucesso:', processedUrl);
+      import.meta.env.DEV && console.log('[ImageProcessingService] Fundo removido com sucesso:', processedUrl);
 
       return processedUrl;
     } catch (error) {

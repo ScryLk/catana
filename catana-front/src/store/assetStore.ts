@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { genId } from '../utils/id';
 
 export interface Asset {
   id: string;
@@ -33,7 +34,7 @@ export const useAssetStore = create<AssetStore>((set, get) => ({
 
         img.onload = () => {
           const asset: Asset = {
-            id: `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: genId('asset'),
             name: file.name,
             url: url,
             type: 'image',
@@ -71,7 +72,7 @@ export const useAssetStore = create<AssetStore>((set, get) => ({
 
       img.onload = () => {
         const asset: Asset = {
-          id: `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: genId('asset'),
           name: name,
           url: url,
           type: 'image',

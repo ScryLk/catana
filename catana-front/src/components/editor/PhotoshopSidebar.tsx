@@ -1144,8 +1144,8 @@ const PropertiesPanel: FC = () => {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
 
   const handleSelectImage = (assetIdOrUrl: string) => {
-    console.log('[PhotoshopSidebar] handleSelectImage chamado com:', assetIdOrUrl);
-    console.log('[PhotoshopSidebar] selectedElement:', selectedElement);
+    import.meta.env.DEV && console.log('[PhotoshopSidebar] handleSelectImage chamado com:', assetIdOrUrl);
+    import.meta.env.DEV && console.log('[PhotoshopSidebar] selectedElement:', selectedElement);
 
     if (!selectedElement) {
       console.error('[PhotoshopSidebar] Nenhum elemento selecionado!');
@@ -1154,14 +1154,14 @@ const PropertiesPanel: FC = () => {
 
     // Se for uma URL (começa com http), usar imageUrl
     if (assetIdOrUrl.startsWith('http')) {
-      console.log('[PhotoshopSidebar] É uma URL, atualizando com imageUrl...');
+      import.meta.env.DEV && console.log('[PhotoshopSidebar] É uma URL, atualizando com imageUrl...');
       updateElement(selectedElement.id, {
         imageUrl: assetIdOrUrl,
         type: 'image', // Atualizar para tipo 'image'
       });
     } else {
       // Se não, é um assetId local
-      console.log('[PhotoshopSidebar] É um assetId local, atualizando content...');
+      import.meta.env.DEV && console.log('[PhotoshopSidebar] É um assetId local, atualizando content...');
       updateElement(selectedElement.id, {
         content: {
           assetId: assetIdOrUrl,

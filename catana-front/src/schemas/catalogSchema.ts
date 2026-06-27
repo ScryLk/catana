@@ -391,7 +391,7 @@ export function formatValidationErrors(errors: z.ZodError): string[] {
  *
  * const result = validateCatalogJSON(json);
  * if (result.success) {
- *   console.log("JSON válido!", result.data);
+ *   import.meta.env.DEV && console.log("JSON válido!", result.data);
  * } else {
  *   console.error("Erros:", formatValidationErrors(result.errors));
  * }

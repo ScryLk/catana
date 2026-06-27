@@ -4,6 +4,7 @@
  * Serviço centralizado para exportar e importar catálogos em JSON
  */
 
+import { genId } from '../utils/id';
 import type { CatalogPage, CatalogElement } from '../types/editor';
 import type {
   CatalogExportSchema,
@@ -340,7 +341,7 @@ export function importCatalog(
 
   const getRealId = (logicalId: string, prefix: string = 'element'): string => {
     if (!idMap.has(logicalId)) {
-      const newId = `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newId = genId(prefix);
       idMap.set(logicalId, newId);
     }
     return idMap.get(logicalId)!;

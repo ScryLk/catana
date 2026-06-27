@@ -111,15 +111,15 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
     // Sempre parar propagação para não conflitar com FigmaCanvas
     e.stopPropagation();
 
-    console.log('[ImageFigma] PointerDown - isLocked:', isLocked, 'isSelected:', isSelected);
+    import.meta.env.DEV && console.log('[ImageFigma] PointerDown - isLocked:', isLocked, 'isSelected:', isSelected);
 
     if (isLocked || !isSelected) {
-      console.log('[ImageFigma] Calling onSelect');
+      import.meta.env.DEV && console.log('[ImageFigma] Calling onSelect');
       onSelect?.();
       return;
     }
 
-    console.log('[ImageFigma] Starting drag mode');
+    import.meta.env.DEV && console.log('[ImageFigma] Starting drag mode');
 
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
@@ -131,7 +131,7 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
       y: (e.clientY - camera.y) / zoomDecimal,
     };
 
-    console.log('[ImageFigma] Drag snapshot:', { position, mouseCanvas });
+    import.meta.env.DEV && console.log('[ImageFigma] Drag snapshot:', { position, mouseCanvas });
 
     dragSnapshotRef.current = {
       positionInitial: { ...position },

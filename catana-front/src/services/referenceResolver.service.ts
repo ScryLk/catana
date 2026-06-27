@@ -420,7 +420,7 @@ export async function loadProductsForContext(
       productMap.set(product.id, product);
     });
 
-    console.log(`[ReferenceResolver] Loaded ${productMap.size} products from backend`);
+    import.meta.env.DEV && console.log(`[ReferenceResolver] Loaded ${productMap.size} products from backend`);
     return productMap;
   } catch (error) {
     console.error('[ReferenceResolver] Error loading products:', error);

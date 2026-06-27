@@ -43,7 +43,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
 
       // Debug log
       if (!isPDF) {
-        console.log('[ElementRenderer] Building border:', {
+        import.meta.env.DEV && console.log('[ElementRenderer] Building border:', {
           element: element.id,
           type: element.type,
           borderProps,
@@ -70,7 +70,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
 
   // Debug baseStyle
   if (!isPDF && element.style?.borderWidth) {
-    console.log('[ElementRenderer] Applied baseStyle:', {
+    import.meta.env.DEV && console.log('[ElementRenderer] Applied baseStyle:', {
       element: element.id,
       baseStyle,
     });
@@ -198,14 +198,14 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               updateElement(element.id, updates);
             }}
             onSelect={() => {
-              console.log('[ElementRenderer] Image clicked, selecting element:', element.id);
+              import.meta.env.DEV && console.log('[ElementRenderer] Image clicked, selecting element:', element.id);
               setSelectedElement(element.id);
             }}
             onDelete={() => {
               useEditorStore.getState().deleteElement(element.id);
             }}
             onCommit={() => {
-              console.log('[ElementRenderer] Image committed');
+              import.meta.env.DEV && console.log('[ElementRenderer] Image committed');
             }}
           />
         );
@@ -413,7 +413,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               updateElement(element.id, { lineData: newData });
             }}
             onSelect={() => {
-              console.log('[ElementRenderer] Line clicked, selecting element:', element.id);
+              import.meta.env.DEV && console.log('[ElementRenderer] Line clicked, selecting element:', element.id);
               setSelectedElement(element.id);
             }}
             onDelete={() => {
@@ -422,7 +422,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
             }}
             onCommit={() => {
               // Commit to history (optional callback for future undo/redo)
-              console.log('[ElementRenderer] Line committed');
+              import.meta.env.DEV && console.log('[ElementRenderer] Line committed');
             }}
             onResizeStateChange={(isResizing) => {
               onResizeStateChange?.(element.id, isResizing);

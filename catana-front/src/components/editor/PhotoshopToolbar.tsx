@@ -129,7 +129,7 @@ export const PhotoshopToolbar: FC<Props> = ({ onShowPreview, onSaveComponent, on
 
   // Função para ativar a ferramenta (não adiciona mais o elemento automaticamente)
   const handleAddElement = (type: string) => {
-    console.log('[PhotoshopToolbar] Ativando ferramenta:', type);
+    import.meta.env.DEV && console.log('[PhotoshopToolbar] Ativando ferramenta:', type);
     setActiveTool(type);
     // Agora o elemento só será adicionado quando o usuário clicar no canvas
   };
@@ -338,7 +338,7 @@ export const PhotoshopToolbar: FC<Props> = ({ onShowPreview, onSaveComponent, on
           onClose={() => setShowMediaLibrary(false)}
           selectionMode={true}
           onSelect={(imageUrl) => {
-            console.log('[PhotoshopToolbar] Imagem selecionada:', imageUrl);
+            import.meta.env.DEV && console.log('[PhotoshopToolbar] Imagem selecionada:', imageUrl);
 
             // Adicionar elemento de imagem ao catálogo
             addElement({

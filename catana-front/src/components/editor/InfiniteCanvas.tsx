@@ -235,7 +235,7 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onSelect, 
 
     // Log para debug
     if (element.type.includes('confeitaria')) {
-      console.log('[InfiniteCanvas] Renderizando elemento tipo:', element.type, 'Content:', element.content);
+      import.meta.env.DEV && console.log('[InfiniteCanvas] Renderizando elemento tipo:', element.type, 'Content:', element.content);
     }
 
     switch (element.type) {
@@ -468,8 +468,8 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onSelect, 
         );
       case 'image':
         // Novo tipo para imagens da API que usam imageUrl direto
-        console.log('🟢🟢🟢 [InfiniteCanvas] Renderizando tipo "image"!', element);
-        console.log('🟢 imageUrl:', element.imageUrl);
+        import.meta.env.DEV && console.log('🟢🟢🟢 [InfiniteCanvas] Renderizando tipo "image"!', element);
+        import.meta.env.DEV && console.log('🟢 imageUrl:', element.imageUrl);
 
         // Build CSS filter string
         const imageFilters = [];
@@ -502,7 +502,7 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onSelect, 
                   objectFit: element.style?.objectFit || 'cover',
                   filter: imageFilterStyle,
                 }}
-                onLoad={() => console.log('✅ [InfiniteCanvas] Imagem carregada:', element.imageUrl)}
+                onLoad={() => import.meta.env.DEV && console.log('✅ [InfiniteCanvas] Imagem carregada:', element.imageUrl)}
                 onError={(_e) => {
                   console.error('❌ [InfiniteCanvas] Erro ao carregar imagem:', element.imageUrl);
                 }}
@@ -761,20 +761,20 @@ export const InfiniteCanvas: FC = () => {
 
   // Debug: Log quando mudar de página
   useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('[InfiniteCanvas] Mudança de página detectada');
-    console.log('[InfiniteCanvas] Página atual:', currentPage?.name, 'ID:', currentPage?.id);
-    console.log('[InfiniteCanvas] Total de páginas:', pages.length);
-    console.log('[InfiniteCanvas] Elementos na página atual:', elements.length);
+    import.meta.env.DEV && console.log('═══════════════════════════════════════');
+    import.meta.env.DEV && console.log('[InfiniteCanvas] Mudança de página detectada');
+    import.meta.env.DEV && console.log('[InfiniteCanvas] Página atual:', currentPage?.name, 'ID:', currentPage?.id);
+    import.meta.env.DEV && console.log('[InfiniteCanvas] Total de páginas:', pages.length);
+    import.meta.env.DEV && console.log('[InfiniteCanvas] Elementos na página atual:', elements.length);
     if (elements.length > 0) {
-      console.log('[InfiniteCanvas] Detalhes dos elementos:');
+      import.meta.env.DEV && console.log('[InfiniteCanvas] Detalhes dos elementos:');
       elements.forEach((e, i) => {
-        console.log(`  ${i + 1}.Tipo: ${e.type}, ID: ${e.id.substring(0, 20)}..., PageID: ${e.pageId} `);
+        import.meta.env.DEV && console.log(`  ${i + 1}.Tipo: ${e.type}, ID: ${e.id.substring(0, 20)}..., PageID: ${e.pageId} `);
       });
     } else {
-      console.log('[InfiniteCanvas] ⚠️ NENHUM elemento encontrado nesta página!');
+      import.meta.env.DEV && console.log('[InfiniteCanvas] ⚠️ NENHUM elemento encontrado nesta página!');
     }
-    console.log('═══════════════════════════════════════');
+    import.meta.env.DEV && console.log('═══════════════════════════════════════');
   }, [currentPage?.id]);
 
   // Tamanho fixo A4 (mesmo dos templates DiPACK)
@@ -809,7 +809,7 @@ export const InfiniteCanvas: FC = () => {
 
   // Recentralizar quando mudar de página
   useEffect(() => {
-    console.log('[InfiniteCanvas] Recentralizando canvas para nova página...');
+    import.meta.env.DEV && console.log('[InfiniteCanvas] Recentralizando canvas para nova página...');
     setPan({
       x: (window.innerWidth - FIXED_PAGE_WIDTH * zoomDecimal) / 2,
       y: Math.max(100, (window.innerHeight - FIXED_PAGE_HEIGHT * zoomDecimal) / 2)
@@ -1102,7 +1102,7 @@ export const InfiniteCanvas: FC = () => {
         const worldX = (e.clientX - pan.x) / zoomDecimal;
         const worldY = (e.clientY - pan.y) / zoomDecimal;
 
-        console.log('[InfiniteCanvas] Criando elemento na posição:', { worldX, worldY, clientX: e.clientX, clientY: e.clientY, pan, zoomDecimal });
+        import.meta.env.DEV && console.log('[InfiniteCanvas] Criando elemento na posição:', { worldX, worldY, clientX: e.clientX, clientY: e.clientY, pan, zoomDecimal });
 
         const elementData: any = {
           position: { x: worldX, y: worldY },
@@ -1344,7 +1344,7 @@ export const InfiniteCanvas: FC = () => {
         return;
       }
 
-      console.log(`Iniciando exportação de ${sortedPages.length} páginas...`);
+      import.meta.env.DEV && console.log(`Iniciando exportação de ${sortedPages.length} páginas...`);
 
       // Configurar PDF
       const pdf = new jsPDF({
@@ -1363,7 +1363,7 @@ export const InfiniteCanvas: FC = () => {
       for (let pageIndex = 0; pageIndex < sortedPages.length; pageIndex++) {
         const page = sortedPages[pageIndex];
 
-        console.log(`Processando página ${pageIndex + 1}/${sortedPages.length}: ${page.name}`);
+        import.meta.env.DEV && console.log(`Processando página ${pageIndex + 1}/${sortedPages.length}: ${page.name}`);
 
         // Verificar se a página tem templates DiPACK
         const hasDiPackTemplates = page.elements.some(el => el.type?.startsWith('dipack-'));
@@ -1394,7 +1394,7 @@ export const InfiniteCanvas: FC = () => {
           ...dipackBackCovers
         ];
 
-        console.log(`Encontrados ${pageTemplates.length} templates na página "${page.name}"`, {
+        import.meta.env.DEV && console.log(`Encontrados ${pageTemplates.length} templates na página "${page.name}"`, {
           showcases: dipackShowcases.length,
           covers: dipackCovers.length,
           institutional: dipackInstitutional.length,
@@ -1406,8 +1406,8 @@ export const InfiniteCanvas: FC = () => {
         for (let i = 0; i < pageTemplates.length; i++) {
           const originalElement = pageTemplates[i] as HTMLElement;
 
-          console.log(`Capturando template ${i + 1}/${pageTemplates.length} da página "${page.name}"...`);
-          console.log('Elemento original:', {
+          import.meta.env.DEV && console.log(`Capturando template ${i + 1}/${pageTemplates.length} da página "${page.name}"...`);
+          import.meta.env.DEV && console.log('Elemento original:', {
             className: originalElement.className,
             tagName: originalElement.tagName,
           });
@@ -1441,7 +1441,7 @@ export const InfiniteCanvas: FC = () => {
           await waitForImagesToLoad(tempContainer);
 
           // Log das dimensões
-          console.log('Dimensões do container temporário:', {
+          import.meta.env.DEV && console.log('Dimensões do container temporário:', {
             width: tempContainer.offsetWidth,
             height: tempContainer.offsetHeight,
             clonedWidth: clonedElement.offsetWidth,
@@ -1459,7 +1459,7 @@ export const InfiniteCanvas: FC = () => {
             height: 1130,
           });
 
-          console.log('Canvas gerado:', {
+          import.meta.env.DEV && console.log('Canvas gerado:', {
             width: canvas.width,
             height: canvas.height,
           });
@@ -1491,7 +1491,7 @@ export const InfiniteCanvas: FC = () => {
       const timestamp = new Date().toISOString().split('T')[0];
       pdf.save(`Catalogo-DiPACK-${timestamp}.pdf`);
 
-      console.log(`✅ Exportação concluída! ${totalTemplatesExported} templates de ${sortedPages.length} páginas exportados.`);
+      import.meta.env.DEV && console.log(`✅ Exportação concluída! ${totalTemplatesExported} templates de ${sortedPages.length} páginas exportados.`);
 
     } catch (error) {
       console.error('Erro ao exportar:', error);
@@ -1501,11 +1501,11 @@ export const InfiniteCanvas: FC = () => {
 
   // Get context menu items based on selection
   const getContextMenuItems = () => {
-    console.log('[ContextMenu] getContextMenuItems called, contextMenu:', contextMenu);
+    import.meta.env.DEV && console.log('[ContextMenu] getContextMenuItems called, contextMenu:', contextMenu);
     if (!contextMenu) return [];
 
     const { elementId } = contextMenu;
-    console.log('[ContextMenu] Element ID:', elementId);
+    import.meta.env.DEV && console.log('[ContextMenu] Element ID:', elementId);
 
     // Canvas context menu (no element selected)
     if (!elementId) {
@@ -1550,7 +1550,7 @@ export const InfiniteCanvas: FC = () => {
         icon: <FiCopy />,
         shortcut: '⌘ D',
         onClick: () => {
-          console.log('[ContextMenu] Duplicating element:', elementId);
+          import.meta.env.DEV && console.log('[ContextMenu] Duplicating element:', elementId);
           duplicateElement(elementId);
         },
       },
@@ -1559,7 +1559,7 @@ export const InfiniteCanvas: FC = () => {
         icon: <FiTrash2 />,
         shortcut: 'Del',
         onClick: () => {
-          console.log('[ContextMenu] Deleting element:', elementId);
+          import.meta.env.DEV && console.log('[ContextMenu] Deleting element:', elementId);
           deleteElement(elementId);
         },
         separator: !isDiPackTemplate,
@@ -1586,7 +1586,7 @@ export const InfiniteCanvas: FC = () => {
         icon: <BsBoxes />,
         shortcut: '⌘ G',
         onClick: () => {
-          console.log('[ContextMenu] Grouping elements:', selectedElementIds);
+          import.meta.env.DEV && console.log('[ContextMenu] Grouping elements:', selectedElementIds);
           groupElements(selectedElementIds);
         },
         disabled: !canGroup,
@@ -1596,7 +1596,7 @@ export const InfiniteCanvas: FC = () => {
         icon: <BsGrid3X3 />,
         shortcut: '⌘ ⇧ G',
         onClick: () => {
-          console.log('[ContextMenu] Ungrouping element:', elementId);
+          import.meta.env.DEV && console.log('[ContextMenu] Ungrouping element:', elementId);
           ungroupElements(elementId);
         },
         disabled: !isGroup,
@@ -1607,7 +1607,7 @@ export const InfiniteCanvas: FC = () => {
         icon: element.visible === false ? <FiEye /> : <FiEyeOff />,
         shortcut: '⌘ ⇧ H',
         onClick: () => {
-          console.log('[ContextMenu] Toggling visibility for:', elementId, 'Current:', element.visible);
+          import.meta.env.DEV && console.log('[ContextMenu] Toggling visibility for:', elementId, 'Current:', element.visible);
           updateElement(elementId, { visible: element.visible === false ? true : false });
         },
       },
@@ -1616,7 +1616,7 @@ export const InfiniteCanvas: FC = () => {
         icon: element.locked ? <FiUnlock /> : <FiLock />,
         shortcut: '⌘ ⇧ L',
         onClick: () => {
-          console.log('[ContextMenu] Toggling lock for:', elementId, 'Current:', element.locked);
+          import.meta.env.DEV && console.log('[ContextMenu] Toggling lock for:', elementId, 'Current:', element.locked);
           updateElement(elementId, { locked: !element.locked });
         },
       },
@@ -1732,7 +1732,7 @@ export const InfiniteCanvas: FC = () => {
 
       {/* Elements */}
       {elements.map((element) => {
-        console.log('[InfiniteCanvas] Renderizando elemento:', element.id, element.type, element.position);
+        import.meta.env.DEV && console.log('[InfiniteCanvas] Renderizando elemento:', element.id, element.type, element.position);
         if (element.groupId && !element.isGroup) return null;
 
         return (

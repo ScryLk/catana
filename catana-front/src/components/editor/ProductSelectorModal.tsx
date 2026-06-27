@@ -27,7 +27,7 @@ export const ProductSelectorModal: FC<ProductSelectorModalProps> = ({
     try {
       setLoading(true);
       setError(null);
-      console.log('[ProductSelectorModal] Loading products...');
+      import.meta.env.DEV && console.log('[ProductSelectorModal] Loading products...');
 
       const results = await productService.searchForEditor({
         query: searchQuery || undefined,
@@ -36,7 +36,7 @@ export const ProductSelectorModal: FC<ProductSelectorModalProps> = ({
         sede: sedeId,
       });
 
-      console.log('[ProductSelectorModal] Products loaded:', results.length);
+      import.meta.env.DEV && console.log('[ProductSelectorModal] Products loaded:', results.length);
       setProducts(results);
     } catch (err: any) {
       console.error('[ProductSelectorModal] Error loading products:', err);

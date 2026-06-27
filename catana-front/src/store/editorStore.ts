@@ -3,11 +3,12 @@ import type { EditorStore, CatalogElement, CatalogPage, HeaderFooterConfig } fro
 import type { DesignTokens } from '../types/designTokens';
 import { DEFAULT_DESIGN_TOKENS } from '../types/designTokens';
 import { exportCatalog, downloadCatalogJSON } from '../services/catalogIO.service';
+import { genId } from '../utils/id';
 
 const MAX_HISTORY = 50;
 
 const createInitialPage = (): CatalogPage => ({
-  id: `page-${Date.now()}`,
+  id: genId('page'),
   name: 'Página 1',
   order: 0,
   elements: [],
@@ -86,7 +87,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       const newElement: CatalogElement = {
         ...element,
         ...(contentCopy !== undefined ? { content: contentCopy } : {}),
-        id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: genId('element'),
         name: element.name || defaultName,
         pageId: targetPage.id,
         zIndex: targetPage.elements.length,
@@ -267,7 +268,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         maxY = Math.max(maxY, el.position.y + el.size.height);
       });
 
-      const groupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const groupId = genId('group');
 
       // Create group element (invisible container)
       const groupElement: CatalogElement = {
@@ -382,7 +383,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
       const newElement: CatalogElement = {
         ...element,
-        id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: genId('element'),
         position: {
           x: element.position.x + 20,
           y: element.position.y + 20,
@@ -434,7 +435,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     addPage: (name) => {
       set((state) => {
         const newPage: CatalogPage = {
-          id: `page-${Date.now()}`,
+          id: genId('page'),
           name: name || `Página ${state.pages.length + 1}`,
           order: state.pages.length,
           elements: [],

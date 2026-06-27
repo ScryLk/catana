@@ -161,7 +161,7 @@ export const PublicProfilePage: FC = () => {
   const handleOpenChat = () => {
     if (!profile) return;
     // TODO: Abrir chat com o usuário
-    console.log('Abrir chat com:', profile.id);
+    import.meta.env.DEV && console.log('Abrir chat com:', profile.id);
   };
 
   if (isLoading) {

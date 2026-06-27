@@ -72,16 +72,16 @@ const CatalogEditorContent: FC = () => {
         .then(isImported => {
           if (isImported) {
             // Carregar catálogo do backend
-            console.log('[CatalogEditor] Carregando catálogo importado:', numericCatalogId);
+            import.meta.env.DEV && console.log('[CatalogEditor] Carregando catálogo importado:', numericCatalogId);
             return loadImportedCatalog(numericCatalogId);
           }
           return null;
         })
         .then(loaded => {
           if (loaded) {
-            console.log('[CatalogEditor] Catálogo importado carregado:', loaded.catalogName);
-            console.log('[CatalogEditor] Páginas:', loaded.pages.length);
-            console.log('[CatalogEditor] Design Tokens:', loaded.designTokens ? 'Sim' : 'Não');
+            import.meta.env.DEV && console.log('[CatalogEditor] Catálogo importado carregado:', loaded.catalogName);
+            import.meta.env.DEV && console.log('[CatalogEditor] Páginas:', loaded.pages.length);
+            import.meta.env.DEV && console.log('[CatalogEditor] Design Tokens:', loaded.designTokens ? 'Sim' : 'Não');
 
             // Importar páginas para o EditorStore
             importPages(loaded.pages, loaded.catalogName, loaded.designTokens);
@@ -178,8 +178,8 @@ const CatalogEditorContent: FC = () => {
 
   // Keyboard shortcuts
   useEditorShortcuts({
-    onCopy: () => console.log('Copy'),
-    onPaste: () => console.log('Paste'),
+    onCopy: () => import.meta.env.DEV && console.log('Copy'),
+    onPaste: () => import.meta.env.DEV && console.log('Paste'),
     onDuplicate: () => selectedElementIds.forEach(id => duplicateElement(id)),
     onDelete: () => selectedElementIds.forEach(id => deleteElement(id)),
     onUndo: undo,

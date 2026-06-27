@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import type { FC } from 'react';
 
 import { Upload, X, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
-import * as XLSX from 'xlsx';
+// FRG-07: fork mantido do SheetJS (xlsx oficial tem prototype pollution + ReDoS sem fix).
+import * as XLSX from '@e965/xlsx';
 import { productService } from '@/services/productService';
 
 interface ImportProductsModalProps {

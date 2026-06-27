@@ -110,7 +110,7 @@ class PDFExportService {
   // Helper to export specific pages (future implementation)
   async generateMultiPagePDF(pageIds: string[], options: PDFExportOptions = {}): Promise<void> {
     // TODO: Implement logic to render each page individually and add to PDF
-    console.log('Multi-page export not yet implemented', pageIds, options);
+    import.meta.env.DEV && console.log('Multi-page export not yet implemented', pageIds, options);
   }
 }
 

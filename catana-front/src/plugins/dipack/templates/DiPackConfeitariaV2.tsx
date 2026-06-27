@@ -32,9 +32,9 @@ export const DiPackConfeitariaV2: FC<DiPackConfeiteriaProps> = ({
   // Usar produtos passados via props
   const products = propsProducts ?? [];
 
-  console.log('[DiPackConfeitaria] Produtos recebidos:', products.length, products);
-  console.log('[DiPackConfeitaria] Render. Page:', pageNumber, 'Products count:', products.length, 'Props passed?', !!propsProducts);
-  console.log('[DiPackConfeitaria] First product:', products[0]);
+  import.meta.env.DEV && console.log('[DiPackConfeitaria] Produtos recebidos:', products.length, products);
+  import.meta.env.DEV && console.log('[DiPackConfeitaria] Render. Page:', pageNumber, 'Products count:', products.length, 'Props passed?', !!propsProducts);
+  import.meta.env.DEV && console.log('[DiPackConfeitaria] First product:', products[0]);
 
   return (
     <div

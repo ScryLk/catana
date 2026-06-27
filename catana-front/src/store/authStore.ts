@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthStore>()(
         const token = localStorage.getItem('access_token');
 
         if (user && token) {
-          console.log('User authenticated:', user.name);
+          import.meta.env.DEV && console.log('User authenticated:', user.name);
         } else if (!token && user) {
           // Token expirado mas ainda tem user no store
           set({ user: null, isAuthenticated: false });
