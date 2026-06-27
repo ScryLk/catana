@@ -14,3 +14,6 @@ __pycache__/
 
 # Mídia enviada em runtime
 media/
+
+# Bancos sqlite locais/CI
+*.db
