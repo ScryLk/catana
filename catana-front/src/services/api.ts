@@ -1,7 +1,20 @@
 import axios, { AxiosError } from 'axios';
 
+// TODO(arquitetura) SEG-06: avaliar mover o refresh token para cookie
+// HttpOnly/SameSite em vez de localStorage (mitiga roubo via XSS).
+
 // Base URL da API (de acordo com o swagger)
 const API_BASE_URL = (import.meta.env && import.meta.env.VITE_API_BASE_URL) || 'http://localhost:8000';
+
+// SEG-02: limpa a sessão e manda para o login (usado em 401 sem refresh).
+function forceLogout() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
 
 // Criar instância do axios
 const api = axios.create({
@@ -38,38 +51,34 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      // Sem refresh token: sessão inválida, força logout.
+      if (!refreshToken) {
+        forceLogout();
+        return Promise.reject(error);
+      }
+
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
+        // Tentar refresh do token
+        const response = await axios.post(`${API_BASE_URL}/api/auth/token/refresh/`, {
+          refresh: refreshToken,
+        });
 
-        if (refreshToken) {
-          // Tentar refresh do token
-          const response = await axios.post(`${API_BASE_URL}/api/auth/token/refresh/`, {
-            refresh: refreshToken,
-          });
+        const { access } = response.data;
 
-          const { access } = response.data;
+        // Salvar novo access token
+        localStorage.setItem('access_token', access);
 
-          // Salvar novo access token
-          localStorage.setItem('access_token', access);
-
-          // Refazer a requisição original com o novo token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access}`;
-          }
-
-          return api(originalRequest);
+        // Refazer a requisição original com o novo token
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${access}`;
         }
+
+        return api(originalRequest);
       } catch (refreshError) {
         // Se o refresh falhar, limpar tokens e redirecionar para login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-
-        // Redirecionar para login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-
+        forceLogout();
         return Promise.reject(refreshError);
       }
     }

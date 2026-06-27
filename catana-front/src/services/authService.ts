@@ -33,15 +33,6 @@ class AuthService {
   }
 
   /**
-   * Realiza registro de usuário
-   * POST /api/users/ (ou ajuste para o endpoint correto do backend)
-   */
-  async register(data: { username: string; email: string; password: string; role: string }): Promise<User> {
-    const response = await api.post<User>('/api/users/', data);
-    return response.data;
-  }
-
-  /**
    * Salva tokens no localStorage
    */
   saveTokens(tokens: TokenResponse): void {
