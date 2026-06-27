@@ -131,8 +131,16 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # SEG-02: por padrao exige autenticacao. Endpoints publicos declaram
+    # AllowAny explicitamente (ver allowlist no topo de api/views.py).
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     # INC-07: aponta o schema do drf-spectacular como gerador padrao.
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # COR-03: paginacao global padrao (24/pagina, 4x6 no front).
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 24,
 }
 
 AUTH_USER_MODEL = 'api.User'

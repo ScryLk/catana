@@ -16,6 +16,23 @@ from .serializers import (
     UserProfileSerializer, UserPreferencesSerializer, UpdateProfileSerializer, ChangePasswordSerializer,
     PublicProductSerializer
 )
+from .permissions import IsOrganizationAdmin, CanCreateSede
+
+from rest_framework import serializers
+
+
+# ============================================
+# SEG-02/SEG-03: Autenticação
+# ============================================
+# O padrão global é IsAuthenticated (ver settings REST_FRAMEWORK).
+# Allowlist de endpoints PÚBLICOS (AllowAny explícito):
+#   - register_user            (POST /api/register/)
+#   - TokenObtainPairView      (POST /api/auth/token/)         [simplejwt]
+#   - TokenRefreshView         (POST /api/auth/token/refresh/) [simplejwt]
+#   - ExploreProductViewSet    (GET  /api/explore/products/)
+#   - CatalogViewSet.explore   (GET  /api/catalogs/explore/)
+# Tudo o mais exige token válido. Os viewsets de organização/sede aplicam
+# também as classes de permissions.py (IsOrganizationAdmin / CanCreateSede).
 
 
 # ============================================
@@ -39,7 +56,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 class SedeSharingViewSet(viewsets.ModelViewSet):
     queryset = SedeSharing.objects.all()
     serializer_class = SedeSharingSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, CanCreateSede]
     filterset_fields = ['source_sede', 'target_sede', 'resource_type']
 
     def perform_create(self, serializer):
@@ -54,7 +71,12 @@ class UserViewSet(viewsets.ModelViewSet):
 class OrganizationViewSet(viewsets.ModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        # Leitura para qualquer autenticado; escrita só para admin da organização.
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsOrganizationAdmin()]
 
     def get_queryset(self):
         # Users can only see organizations they belong to
@@ -70,9 +92,6 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         
         # Set owner to current user
         org = serializer.save(owner=user)
@@ -82,20 +101,22 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 class SedeViewSet(viewsets.ModelViewSet):
     queryset = Sede.objects.all()
     serializer_class = SedeSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, CanCreateSede]
     filterset_fields = ['organization']
 
 class MediaFolderViewSet(viewsets.ModelViewSet):
     queryset = MediaFolder.objects.all()
     serializer_class = MediaFolderSerializer
-    permission_classes = [permissions.AllowAny]
     filterset_fields = ['created_by', 'parent', 'organization', 'sede']
 
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
 
-        # Security: Always restrict to user's scope first (unless superuser)
+        # FRG-08: evita AttributeError com AnonymousUser (defensivo; o default
+        # global ja exige autenticacao). Restringe ao escopo do usuario.
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             # Users can only see folders from their organizations or created by them
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
@@ -112,9 +133,6 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         
         # Validate Organization
         org_id = self.request.data.get('organization')
@@ -130,7 +148,6 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [permissions.AllowAny]
     filterset_fields = ['parent', 'organization', 'sede']
 
     def get_queryset(self):
@@ -146,9 +163,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(created_by=user)
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -160,6 +174,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Security: Always restrict to user's scope first (unless superuser)
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
 
@@ -183,9 +199,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
 
         # Validate Organization
         org_id = self.request.data.get('organization')
@@ -209,8 +222,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            user = User.objects.filter(is_superuser=True).first()
 
         product = serializer.save()
 
@@ -250,7 +261,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 class MediaViewSet(viewsets.ModelViewSet):
     queryset = Media.objects.all()
     serializer_class = MediaSerializer
-    permission_classes = [permissions.AllowAny]
     filterset_fields = ['uploaded_by', 'file', 'organization', 'sede']
 
     def get_queryset(self):
@@ -258,6 +268,8 @@ class MediaViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Security: Always restrict to user's scope first (unless superuser)
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             # Users can only see media from their organizations or uploaded by them
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(uploaded_by=user))
@@ -286,9 +298,6 @@ class MediaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         
         # Validate Organization
         org_id = self.request.data.get('organization')
@@ -441,9 +450,6 @@ class ThemeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(created_by=user)
 
 class CatalogViewSet(viewsets.ModelViewSet):
@@ -460,6 +466,8 @@ class CatalogViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Security: Always restrict to user's scope first (unless superuser)
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             # Users can only see catalogs from their organizations or personal ones
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
@@ -483,9 +491,6 @@ class CatalogViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
 
         catalog = serializer.save(created_by=user)
 
@@ -501,8 +506,6 @@ class CatalogViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            user = User.objects.filter(is_superuser=True).first()
 
         catalog = serializer.save()
 
@@ -576,9 +579,6 @@ class ComponentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(created_by=user)
 
 class PageComponentViewSet(viewsets.ModelViewSet):
@@ -591,9 +591,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(user=user)
 
 class ActivityViewSet(viewsets.ModelViewSet):
@@ -613,9 +610,6 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(user=user)
 # Profile Views
 @api_view(['GET', 'PATCH'])
@@ -782,12 +776,30 @@ def register_user(request):
         if User.objects.filter(email=email).exists():
             return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            role=role 
-        )
+        from django.db import transaction
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                role=role
+            )
+
+            # FRG-05: provisiona organização + sede padrão para o novo usuário,
+            # senão ele não consegue criar produtos/catálogos (perform_create exige org).
+            organization = Organization.objects.create(
+                name=f'{username} Org',
+                owner=user,
+            )
+            default_sede = Sede.objects.create(
+                name='Sede Principal',
+                organization=organization,
+                responsible_user=user,
+            )
+            organization.default_sede = default_sede
+            organization.save(update_fields=['default_sede'])
+            user.organizations.add(organization)
+            user.sedes.add(default_sede)
 
         # Generate tokens immediately for auto-login
         from rest_framework_simplejwt.tokens import RefreshToken
@@ -797,6 +809,8 @@ def register_user(request):
             'user': UserSerializer(user).data,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'organization': OrganizationSerializer(organization).data,
+            'default_sede': SedeSerializer(default_sede).data,
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
