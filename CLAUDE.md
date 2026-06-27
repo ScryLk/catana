@@ -1,0 +1,183 @@
+# CLAUDE.md — Catana
+
+Guia operacional para trabalhar neste repositório. Baseado em leitura direta do código (jun/2026).
+
+## O que é
+
+**Catana** é uma plataforma para criar, gerenciar e publicar **catálogos digitais de produtos**, com um editor visual estilo Figma/Canva no navegador. O cliente de referência é a **DiPACK Embalagens** (embalagens PET para confeitaria, açougue, festas e food service) — há um plugin dedicado com templates prontos dessa marca.
+
+Funcionalidades centrais:
+- Editor de catálogos drag-and-drop com canvas livre, camadas, snapping, grupos, multi-página e export para PDF.
+- Gestão de **produtos**, **categorias** (hierárquicas), **mídias** (com pastas) e **organizações/sedes** (multi-tenant).
+- Módulo social: **perfis públicos**, explore/descoberta, follows, likes/saves, mensagens (inbox).
+- Multi-tenant em dois níveis: **Organization → Sede** (filial), com compartilhamento de recursos entre sedes.
+
+## Arquitetura (monorepo de 2 apps)
+
+```
+catana/
+├── catana-back/    # API REST — Django + DRF (Python)    [repo git próprio]
+└── catana-front/   # SPA — React 19 + Vite + TS          [repo git próprio]
+```
+> ⚠️ Cada subpasta é um **repositório git independente** (não há git na raiz). Commits/branches são feitos dentro de `catana-back/` ou `catana-front/`.
+
+Fluxo de dados: Front (axios, JWT no `localStorage`) → `http://localhost:8000/api/...` (DRF ViewSets) → PostgreSQL. Mídias servidas de `/media/`.
+
+---
+
+## catana-back (API)
+
+**Stack:** Python 3.11 (Docker) / 3.9+ (local), Django 5.2+, Django REST Framework, PostgreSQL 15, JWT (`djangorestframework-simplejwt`), `drf-spectacular` (Swagger), `django-environ`, Pillow, `django-cors-headers`. Sem versões pinadas em `requirements.txt` (a confirmar/pinar antes de prod).
+
+**Estrutura:**
+- `api/models.py` — TODOS os models (não há divisão por módulo). Entidades principais: `Organization`, `Sede`, `SedeSharing`, `User` (AbstractUser custom, `AUTH_USER_MODEL='api.User'`), `MediaFolder`/`Media`, `Category`, `Product`/`ProductMedia`, `Catalog`/`Page`/`Component`/`PageComponent`, `Theme`, `Activity`, `Notification`, `Conversation`/`Message`, `UserPreferences`, e o bloco social (`PublicProfile`, `ProfileFollow`, `ProfileSave`, `CatalogLike`, `CatalogView`, `BlockedUser`).
+- `api/views.py` (~1000 linhas) — todos os ViewSets + function-views (`register_user`, `dashboard_stats`, `global_search`, `profile_view`, etc).
+- `api/serializers.py`, `api/urls.py` (router DRF), `api/permissions.py` (classes de permissão custom em 2 níveis org/sede).
+- `api/migrations/` — 22 migrações; **sempre** rodar `makemigrations` após mexer em models.
+- `api/management/commands/` — `seed_public_profiles`, `set_public_flag`.
+- `catana_back/settings.py`, `urls.py` — config do projeto. Entrypoint: `manage.py`.
+- Raiz: dezenas de **scripts utilitários soltos** (`seed_database.py`, `insert_fake_products.py`, `add_product_images.py`, `fix_media_*.py`, `test_*.py`/`test_*.sh`) — scripts ad-hoc, não são testes automatizados.
+
+**Models — convenções:** quase toda entidade tem `organization` + `sede` (nullable) + `created_by`. Campos flexíveis em `JSONField` (`Product.specs`, `dropshipping_info`, `Component.content`, `Theme.styles`, `Activity.details`). Social usa `db_table` explícito (ex.: `public_profiles`).
+
+### Rodar o backend
+
+**Docker (recomendado):**
+```bash
+cd catana-back
+docker-compose up --build           # sobe db (postgres:15) + web (migrate + runserver :8000)
+docker-compose exec web python manage.py createsuperuser
+```
+
+**Local (sem Docker):** requer PostgreSQL 15 rodando + `.env` (ver abaixo).
+```bash
+cd catana-back
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver        # :8000   (ou ./start_server.sh → :8001/:8002)
+```
+
+**Comandos úteis:**
+```bash
+python manage.py makemigrations && python manage.py migrate
+python manage.py test                 # roda testes Django (hoje praticamente vazio)
+python manage.py shell
+python manage.py seed_public_profiles # seed do módulo social
+```
+
+**URLs:** API `:8000/api/` · Admin `:8000/admin` · Swagger `:8000/api/schema/swagger-ui/` · Redoc `.../redoc/`.
+
+**Auth (JWT):** `POST /api/auth/token/` (login) · `POST /api/auth/token/refresh/` · `POST /api/register/`. Header: `Authorization: Bearer <token>`.
+
+**`.env` do backend (`catana-back/.env`):**
+```env
+SECRET_KEY='...'
+DATABASE_URL=psql://root:root@localhost:5432/catana_db   # use @db: no Docker
+DEBUG=True
+```
+
+---
+
+## catana-front (SPA)
+
+**Stack:** React 19, TypeScript ~5.9, Vite 7, React Router 7, **Zustand** (estado), **Axios**, **Tailwind v4** (`@tailwindcss/postcss`), **Radix UI** + `class-variance-authority` (componentes), `lucide-react`/`react-icons` (ícones), **@dnd-kit** (drag-and-drop), `sonner` (toasts). PDF: `@react-pdf/renderer`, `jspdf`, `html2canvas-pro`, `print-js`. Outros: `@imgly/background-removal` (remover fundo de imagem no client), `qrcode.react`, `xlsx` (import/export Excel).
+
+**Alias:** `@` → `src/` (`vite.config.ts`). **Não há proxy Vite** — o front bate direto na URL absoluta da API.
+
+**Estrutura (`src/`):**
+- `pages/` — telas roteadas (`Dashboard`, `CatalogEditor`, `Products`, `MediaLibrary`, `Explore`, `Profile`, `PublicProfile`, `Login`, `Register`, `Inbox`, etc).
+- `components/` — UI por domínio: `editor/` (o maior — canvas, toolbars, painéis, `elements/`), `ui/` (design system Radix+CVA), `catalog/`, `media/`, `products/`, `profile/`, `explore/`, `search/`.
+- `store/` — Zustand: `editorStore.ts` (**núcleo do editor**, ~930 linhas: páginas, elementos, seleção, histórico/undo de 50 passos, zoom, grid/snap), `authStore.ts`, `componentStore`, `templateStore`, `assetStore`.
+- `services/` — 23 clients de API/lógica, um por domínio (`api.ts` = instância axios base; `catalogService`, `productService`, `mediaService`, `pdfExportService`, `geminiService`, `layoutEngine.service`, `catalogIO.service`, etc).
+- `contexts/` — React Context para UI (`PanelContext`, `SidebarContext`, `UIContext`, `PluginsContext`).
+- `plugins/` — sistema de plugins. `registry.ts` (registry singleton id→componente) + `dipack/` (templates da DiPACK registrados em `registerDiPackPlugin()`, chamado no topo de `App.tsx`).
+- `types/` — tipos do domínio (`editor.ts` é o central: `ElementType`, posições, páginas), `catalogIO`, `designTokens`, `layoutRules`, `profile`, `api`.
+- `hooks/`, `utils/` (helpers de canvas: snapping, alinhamento, coordenadas, hierarquia), `schemas/catalogSchema.ts`, `lib/products.ts` (catálogo estático de produtos DiPACK usado pelo `ProductModal` via hash da URL).
+- Entrypoints: `index.html` → `src/main.tsx` → `src/App.tsx` (define rotas; quase tudo dentro de `<PrivateRoute>`).
+
+### Rodar o frontend
+```bash
+cd catana-front
+npm install
+npm run dev        # Vite dev server (default :5173)
+npm run build      # tsc -b && vite build
+npm run preview
+npm run lint       # ESLint (flat config, typescript-eslint + react-hooks)
+```
+**`.env` do front (`catana-front/.env`, ver `.env.example`):**
+```env
+VITE_API_BASE_URL=http://localhost:8000
+# VITE_PDFSHIFT_API_KEY=...   # opcional, export PDF via PDFShift
+```
+
+**Sem testes automatizados no front** (nenhum runner configurado). Lint é a única verificação.
+
+---
+
+## Modelo de Catálogo, Persistência e Aparência (crítico)
+
+Um catálogo tem **duas representações paralelas** — entender isso é essencial antes de mexer no editor.
+
+### 1. No banco (PostgreSQL, relacional) — store canônico
+Catálogo = linhas em tabelas, **não** um arquivo. Em `catana-back/api/models.py`:
+- `Catalog` (`:205`): `title`, `description`, `cover_image`→Media, **`theme`→Theme**, `organization`, `sede`, `is_public`, `likes`, `saves`. **Não guarda geometria nem elementos.**
+- `Page` (`:219`): `catalog`, `order`, `background_image`.
+- `PageComponent` (`:235`): geometria (`position_x/y`, `width`, `height`, `layer`) + FK `component`.
+- `Component` (`:225`): `component_type` (`text|image|product`), **`content` (JSONField = JSON completo do elemento)**, `is_reusable`.
+- `Theme` (`:197`): **`styles` (JSONField)** — aparência global mora em `styles.designTokens`.
+
+Aparência + posições ficam espalhadas em `PageComponent` (geometria) + `Component.content` (JSON) + `Theme.styles.designTokens`.
+
+### 2. No editor (frontend, em memória) — formato de trabalho
+`src/store/editorStore.ts` mantém `pages: CatalogPage[]` → `elements: CatalogElement[]` (tipo em `src/types/editor.ts`: ~40 `ElementType`, cada elemento com `position`, `size`, `style`, e dados por tipo `textData`/`productData`/`imageData`…). Exporta/importa um **JSON schema v1.0** (`app:'Catana'`) via `src/services/catalogIO.service.ts`.
+
+### ⚠️ O round-trip está QUEBRADO (save relacional não existe)
+- **Carregar do backend funciona:** `src/services/catalogLoader.service.ts` reconstrói `Page → PageComponent → Component.content` em elementos do editor e lê `Theme.styles.designTokens`.
+- **Salvar o conteúdo do editor de volta ao banco NÃO existe:** `src/services/catalogService.ts` só faz `POST`/`PATCH` de **metadados** (`title`, `description`, `is_public`…). Não há nenhuma chamada que grave `pages`/`page-components`/`components` a partir do editor.
+- O único "save" real do conteúdo é **baixar o JSON** (`downloadCatalogJSON`) ou **exportar PDF**. Um catálogo só "volta" do backend se as tabelas `Page`/`Component` foram populadas por fora (seed/script) — por isso `isImportedCatalog()` apenas checa se já existem páginas. **Para persistir o editor no backend é preciso criar esse endpoint de save (Page/PageComponent/Component), que hoje falta.**
+
+### Aparência: 3 camadas, mal conectadas
+1. **Por elemento (o que de fato funciona):** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização é **manual, elemento a elemento**, no PropertiesPanel.
+2. **Design Tokens globais (existe na arquitetura, desligado da UI):** sistema completo em `src/types/designTokens.ts` (`colors`/`typography`/`spacing`/`borderRadius`/`shadows` + `DEFAULT_DESIGN_TOKENS`), resolvedor `$tokens.colors.primary` em `src/services/referenceResolver.service.ts`, e ações `setDesignTokens/updateDesignTokens` no store. **Mas** começa `undefined`, só é preenchido via `Theme` do backend ou JSON importado, **não há painel para editar tokens**, e os templates DiPACK usam valores fixos (não referências `$tokens.*`). O "tema global de um clique" **não está exposto ao usuário**.
+3. **Templates (plugin DiPACK):** componentes React **hardcoded** em `src/plugins/dipack/templates/` (`DiPackCover`, `DiPackConfeitariaV2`…), visual fixo da marca, **não parametrizável** por cor/fonte. Inserir template = inserir um bloco fixo.
+
+**Resumo:** hoje mudar aparência = estilizar na mão OU inserir template DiPACK fixo. **Não existe** seletor global de tema (paleta+tipografia+layout). A infra de design tokens existe mas está desconectada da UI e da persistência.
+
+---
+
+## Convenções
+
+- **Idioma:** código/comentários e UI em **português** (commits também). Identificadores de código em inglês/português misturados.
+- **Backend:** um app `api` monolítico; ViewSets DRF + router; permissões custom em `permissions.py`; paginação padrão 24/página (`StandardResultsSetPagination`).
+- **Frontend:** componentes funcionais + hooks; estado global em Zustand (não Redux); estilização Tailwind utility-first; imports via alias `@/`.
+- **Branches/commits:** sem convenção estrita (histórico tem mensagens como "a lot of changes"). Branch principal: `main` em ambos os repos.
+
+---
+
+## Armadilhas e cuidados ⚠️
+
+1. **Segredos commitados:** `.env` está **versionado** nos dois repos (no front, apesar de listado no `.gitignore` — foi commitado antes). O `SECRET_KEY` do Django e a senha do banco (`root/root`) estão expostos. Não tratar como seguro; rotacionar antes de qualquer deploy.
+2. **Autenticação efetivamente desligada no backend:** a maioria dos ViewSets usa `permission_classes = [permissions.AllowAny]` com *fallbacks de dev* que atribuem o primeiro superuser quando não há usuário autenticado (ex.: `OrganizationViewSet.perform_create`). As classes em `permissions.py` existem mas **não estão aplicadas** na maior parte das views. O gate real de acesso hoje é só o `<PrivateRoute>` no front. Não confie nisso para produção.
+3. **CORS e hosts abertos:** `CORS_ALLOW_ALL_ORIGINS = True` e `ALLOWED_HOSTS = ['*']` em `settings.py` (hardcoded, não por env). OK para dev, inseguro para prod.
+4. **`authStore.ts` ignora a env var:** usa `API_BASE_URL` **hardcoded** `http://localhost:8000`, enquanto `services/api.ts` respeita `VITE_API_BASE_URL`. Mudar a URL da API exige tocar nos dois lugares.
+5. **Inconsistência register:** `authStore.register()` espera `organization`/`default_sede` na resposta, mas a view `register_user` (`views.py`) só devolve `user/access/refresh`. Existe um `api/views_register_temp.py` à parte — conferir qual é o fluxo real antes de mexer (a confirmar).
+6. **Arquivos órfãos/backup:** `CatalogEditor.tsx.bak`, `PropertiesPanel.tsx.backup`, `views.py_explore_snippet`, `views_register_temp.py`, `analyze_groups.js`, PDFs/XLSX soltos na raiz do front. Não são fonte de verdade — não importar deles.
+7. **`editorStore.ts` tem muitos `console.log`** de debug ativos e IDs gerados com `Date.now()`. É o arquivo mais crítico e frágil do front — mexer com cuidado e testar undo/redo, multi-página e seleção.
+8. **Scripts utilitários do backend na raiz** (`seed_*`, `insert_*`, `fix_*`, `add_*`) rodam direto contra o banco. Ler antes de executar.
+9. **Sem testes reais:** `api/tests.py` está vazio e o front não tem suíte. Os `test_*.py`/`test_*.sh` do backend são scripts manuais de chamada à API, não testes automatizados.
+
+---
+
+## Arquivos para entender rápido
+
+| Para entender… | Olhe |
+|---|---|
+| Domínio/dados (backend) | `catana-back/api/models.py` |
+| Rotas da API | `catana-back/api/urls.py` + Swagger em `/api/schema/swagger-ui/` |
+| Lógica/permissões backend | `catana-back/api/views.py`, `api/permissions.py` |
+| Rotas e bootstrap do front | `catana-front/src/App.tsx`, `src/main.tsx` |
+| Núcleo do editor | `catana-front/src/store/editorStore.ts`, `src/types/editor.ts`, `components/editor/` |
+| Cliente HTTP / JWT | `catana-front/src/services/api.ts`, `src/store/authStore.ts` |
+| Plugin DiPACK (templates) | `catana-front/src/plugins/dipack/`, `src/plugins/registry.ts` |
+| Docs específicas | vários `*.md` soltos (ex.: `BULK_IMPORT_USAGE.md`, `PUBLIC_PROFILES_*.md`, `CATALOG_IMPORT_EXPORT.md`) |
