@@ -377,17 +377,26 @@ def _sec_indice(ctx, order):
 def _card_produto(page, cores, fontes, prod, x, y, w, h):
     page.add(el_rect(cores['surface'], radius=14, border_color=cores['border'],
                      border_width=1, name='Card'), x, y, w, h)
-    img_h = int(h * 0.58)
+    # Faixas verticais sem sobreposição: imagem → nome → descrição (ocupa o vão)
+    # → preço ancorado no rodapé. A descrição é dimensionada para terminar antes
+    # do preço (e o renderer recorta o overflow), então não invade o preço.
+    pad = 16
+    img_h = int(h * 0.48)
     if prod.get('_url'):
         page.add(el_image(prod['_url'], radius=12, name='Foto'), x + 10, y + 10, w - 20, img_h - 10)
-    ty = y + img_h + 6
-    page.add(el_text(prod['nome'], 19, cores['text'], fontes['titulo'], weight='bold',
-                     name='Nome'), x + 16, ty, w - 32, 48)
+    name_y = y + img_h + 8
+    name_h = 26
+    price_h = 30
+    price_y = y + h - 12 - price_h           # preço ancorado no rodapé
+    desc_y = name_y + name_h + 4
+    desc_h = max(28, price_y - desc_y - 8)    # descrição ocupa o vão até o preço
+    page.add(el_text(prod['nome'], 18, cores['text'], fontes['titulo'], weight='bold',
+                     name='Nome'), x + pad, name_y, w - 2 * pad, name_h)
     page.add(el_text(prod.get('descricao', ''), 13, cores['textMuted'], fontes['corpo'],
-                     line_height=1.35, name='Desc'), x + 16, ty + 46, w - 32, 52)
+                     line_height=1.3, name='Desc'), x + pad, desc_y, w - 2 * pad, desc_h)
     preco = prod.get('preco', '0')
-    page.add(el_text(f'R$ {preco}', 22, cores['primary'], fontes['titulo'], weight='bold',
-                     name='Preço'), x + 16, y + h - 46, w - 32, 36)
+    page.add(el_text(f'R$ {preco}', 21, cores['primary'], fontes['titulo'], weight='bold',
+                     name='Preço'), x + pad, price_y, w - 2 * pad, price_h)
 
 
 def _sec_produtos(ctx, order):
