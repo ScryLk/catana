@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import { type FC, useState, useEffect } from 'react';
 import { FiImage, FiUpload, FiLink, FiCheck, FiFolder, FiHome, FiSearch, FiRefreshCw, FiX } from 'react-icons/fi';
 import { mediaService } from '../../services/mediaService';
@@ -32,7 +33,7 @@ export const MediaLibraryModal: FC<MediaLibraryModalProps> = ({
     try {
       setLoadingMedia(true);
       setLoadError(null);
-      import.meta.env.DEV && console.log('[MediaLibraryModal] Carregando imagens do /media...');
+      logger.debug('[MediaLibraryModal] Carregando imagens do /media...');
 
       const images = await mediaService.getImagesForEditor({
         folder: currentFolder || undefined,
@@ -40,7 +41,7 @@ export const MediaLibraryModal: FC<MediaLibraryModalProps> = ({
         limit: 50,
       });
 
-      import.meta.env.DEV && console.log('[MediaLibraryModal] Imagens carregadas:', images);
+      logger.debug('[MediaLibraryModal] Imagens carregadas:', images);
       setMediaImages(images);
     } catch (error: any) {
       console.error('[MediaLibraryModal] Erro ao carregar imagens:', error);

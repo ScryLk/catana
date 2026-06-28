@@ -1,3 +1,4 @@
+import { logger } from '../../../utils/logger';
 import type { FC } from 'react';
 import { useEditorStore } from '../../../store/editorStore';
 import { allProducts } from '../../../lib/products';
@@ -44,7 +45,7 @@ export const DiPackPanel: FC = () => {
             const pagesAfter = useEditorStore.getState().pages;
             const targetPage = pagesAfter[pagesAfter.length - 1];
 
-            import.meta.env.DEV && console.log('[DiPackPanel] Adicionando elemento à página:', targetPage.id, targetPage.name);
+            logger.debug('[DiPackPanel] Adicionando elemento à página:', targetPage.id, targetPage.name);
 
             addElement({
               type: type as any,
@@ -74,18 +75,18 @@ export const DiPackPanel: FC = () => {
     let globalPageCount = 3;
 
     for (const cat of categories) {
-      import.meta.env.DEV && console.log(`[DiPackPanel] Filtrando categoria: '${cat.name}'`);
-      import.meta.env.DEV && console.log(`[DiPackPanel] Total produtos disponíveis: ${allProducts.length}`);
+      logger.debug(`[DiPackPanel] Filtrando categoria: '${cat.name}'`);
+      logger.debug(`[DiPackPanel] Total produtos disponíveis: ${allProducts.length}`);
 
       // Debug first few products categories
-      allProducts.slice(0, 3).forEach(p => import.meta.env.DEV && console.log(`[DiPackPanel] Prod Sample Cat: '${p.category}'`));
+      allProducts.slice(0, 3).forEach(p => logger.debug(`[DiPackPanel] Prod Sample Cat: '${p.category}'`));
 
       const catProducts = allProducts.filter(p => {
         // Robust comparison avoiding whitespace issues
         return p.category?.trim() === cat.name.trim();
       });
 
-      import.meta.env.DEV && console.log(`[DiPackPanel] Produtos encontrados para ${cat.name}: ${catProducts.length}`);
+      logger.debug(`[DiPackPanel] Produtos encontrados para ${cat.name}: ${catProducts.length}`);
 
       if (cat.intro) await addWithDelay(cat.intro, {}, delay);
 
@@ -97,7 +98,7 @@ export const DiPackPanel: FC = () => {
           // Debug data flow
           const chunkCopy = JSON.parse(JSON.stringify(chunk));
 
-          import.meta.env.DEV && console.log(`[DiPackPanel] ADICIONANDO CHUNK DE ${chunkCopy.length} ITENS:`, chunkCopy);
+          logger.debug(`[DiPackPanel] ADICIONANDO CHUNK DE ${chunkCopy.length} ITENS:`, chunkCopy);
 
           await addWithDelay(cat.template, {
             products: chunkCopy,

@@ -15,6 +15,7 @@
  * - resizing: Redimensionando via handle
  */
 
+import { logger } from '../../../utils/logger';
 import { type FC, useState, useRef, useEffect } from 'react';
 import type { ImageData, Position, Size } from '../../../types/editor';
 import type { Camera, ViewportRect } from '../../../utils/lineCoordinates';
@@ -111,15 +112,15 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
     // Sempre parar propagação para não conflitar com FigmaCanvas
     e.stopPropagation();
 
-    import.meta.env.DEV && console.log('[ImageFigma] PointerDown - isLocked:', isLocked, 'isSelected:', isSelected);
+    logger.debug('[ImageFigma] PointerDown - isLocked:', isLocked, 'isSelected:', isSelected);
 
     if (isLocked || !isSelected) {
-      import.meta.env.DEV && console.log('[ImageFigma] Calling onSelect');
+      logger.debug('[ImageFigma] Calling onSelect');
       onSelect?.();
       return;
     }
 
-    import.meta.env.DEV && console.log('[ImageFigma] Starting drag mode');
+    logger.debug('[ImageFigma] Starting drag mode');
 
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
@@ -131,7 +132,7 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
       y: (e.clientY - camera.y) / zoomDecimal,
     };
 
-    import.meta.env.DEV && console.log('[ImageFigma] Drag snapshot:', { position, mouseCanvas });
+    logger.debug('[ImageFigma] Drag snapshot:', { position, mouseCanvas });
 
     dragSnapshotRef.current = {
       positionInitial: { ...position },

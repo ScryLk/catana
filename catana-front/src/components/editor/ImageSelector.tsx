@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import { type FC, useState, useEffect } from 'react';
 import { FiImage, FiUpload, FiLink, FiCheck, FiFolder, FiHome, FiSearch, FiRefreshCw } from 'react-icons/fi';
 import { useAssetStore } from '../../store/assetStore';
@@ -15,7 +16,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
   onImageSelect,
   label = 'Imagem',
 }) => {
-  import.meta.env.DEV && console.log('[ImageSelector] Componente montado');
+  logger.debug('[ImageSelector] Componente montado');
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'library' | 'upload' | 'url'>('library');
   const [imageUrl, setImageUrl] = useState('');
@@ -34,7 +35,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
     try {
       setLoadingMedia(true);
       setLoadError(null);
-      import.meta.env.DEV && console.log('[ImageSelector] Carregando imagens do /media...');
+      logger.debug('[ImageSelector] Carregando imagens do /media...');
 
       // Usar endpoint otimizado para o editor
       const images = await mediaService.getImagesForEditor({
@@ -43,7 +44,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
         limit: 50, // Carregar mais imagens por vez
       });
 
-      import.meta.env.DEV && console.log('[ImageSelector] Imagens carregadas:', images);
+      logger.debug('[ImageSelector] Imagens carregadas:', images);
       setMediaImages(images);
     } catch (error: any) {
       console.error('[ImageSelector] Erro ao carregar imagens:', error);
@@ -72,9 +73,9 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
 
   const loadFolders = async () => {
     try {
-      import.meta.env.DEV && console.log('[ImageSelector] Carregando pastas...');
+      logger.debug('[ImageSelector] Carregando pastas...');
       const allFolders = await mediaService.getFolders();
-      import.meta.env.DEV && console.log('[ImageSelector] Pastas carregadas:', allFolders);
+      logger.debug('[ImageSelector] Pastas carregadas:', allFolders);
       // Filtrar apenas pastas da pasta atual
       const currentFolders = allFolders.filter(f => f.parent === currentFolder);
       setFolders(currentFolders);
@@ -138,7 +139,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
   // Carregar imagens quando modal abrir ou quando mudar de pasta/busca
   useEffect(() => {
     if (showModal && activeTab === 'library') {
-      import.meta.env.DEV && console.log('[ImageSelector] Modal aberto, carregando dados...');
+      logger.debug('[ImageSelector] Modal aberto, carregando dados...');
       loadMediaImages();
       loadFolders();
     }
@@ -164,7 +165,7 @@ export const ImageSelector: FC<ImageSelectorProps> = ({
           {/* Select Button */}
           <button
             onClick={() => {
-              import.meta.env.DEV && console.log('[ImageSelector] Botão clicado, abrindo modal...');
+              logger.debug('[ImageSelector] Botão clicado, abrindo modal...');
               setShowModal(true);
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-xl hover:from-primary-600 hover:to-accent-600 transition-all shadow-soft hover:shadow-medium font-medium"

@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import type { FC } from 'react';
 import { Heart, MessageCircle, Bookmark, Eye, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -55,7 +56,7 @@ export const ExploreCatalogCard: FC<ExploreCatalogCardProps> = ({ catalog, onSel
         e.stopPropagation();
         try {
             const conversation = await chatService.startConversation('catalog', Number(catalog.id));
-            import.meta.env.DEV && console.log('Conversation started:', conversation);
+            logger.debug('Conversation started:', conversation);
             // TODO: Navigate to chat or open chat modal
             alert(`Chat started! ID: ${conversation.id}`);
         } catch (error) {

@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import { type FC, useState, useEffect } from 'react';
 import {
   FiLayers,
@@ -1144,8 +1145,8 @@ const PropertiesPanel: FC = () => {
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
 
   const handleSelectImage = (assetIdOrUrl: string) => {
-    import.meta.env.DEV && console.log('[PhotoshopSidebar] handleSelectImage chamado com:', assetIdOrUrl);
-    import.meta.env.DEV && console.log('[PhotoshopSidebar] selectedElement:', selectedElement);
+    logger.debug('[PhotoshopSidebar] handleSelectImage chamado com:', assetIdOrUrl);
+    logger.debug('[PhotoshopSidebar] selectedElement:', selectedElement);
 
     if (!selectedElement) {
       console.error('[PhotoshopSidebar] Nenhum elemento selecionado!');
@@ -1154,14 +1155,14 @@ const PropertiesPanel: FC = () => {
 
     // Se for uma URL (começa com http), usar imageUrl
     if (assetIdOrUrl.startsWith('http')) {
-      import.meta.env.DEV && console.log('[PhotoshopSidebar] É uma URL, atualizando com imageUrl...');
+      logger.debug('[PhotoshopSidebar] É uma URL, atualizando com imageUrl...');
       updateElement(selectedElement.id, {
         imageUrl: assetIdOrUrl,
         type: 'image', // Atualizar para tipo 'image'
       });
     } else {
       // Se não, é um assetId local
-      import.meta.env.DEV && console.log('[PhotoshopSidebar] É um assetId local, atualizando content...');
+      logger.debug('[PhotoshopSidebar] É um assetId local, atualizando content...');
       updateElement(selectedElement.id, {
         content: {
           assetId: assetIdOrUrl,

@@ -10,6 +10,7 @@
  * sem duplicar dados e com sincronização automática.
  */
 
+import { logger } from '../utils/logger';
 import { DesignTokens, resolveTokenReference } from '../types/designTokens';
 import type { CatalogExportSchema } from '../types/catalogIO';
 import { productService, type ProductReference as APIProductReference } from './productService';
@@ -420,7 +421,7 @@ export async function loadProductsForContext(
       productMap.set(product.id, product);
     });
 
-    import.meta.env.DEV && console.log(`[ReferenceResolver] Loaded ${productMap.size} products from backend`);
+    logger.debug(`[ReferenceResolver] Loaded ${productMap.size} products from backend`);
     return productMap;
   } catch (error) {
     console.error('[ReferenceResolver] Error loading products:', error);

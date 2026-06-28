@@ -1,4 +1,5 @@
 
+import { logger } from '../../utils/logger';
 import { type FC, useState } from 'react';
 import { useTemplateStore } from '../../store/templateStore';
 import { useEditorStore } from '../../store/editorStore';
@@ -94,7 +95,7 @@ export const TemplateSelector: FC = () => {
       resetEditor();
       importToEditor(catalogPages, catalogName || template.name, settings);
 
-      import.meta.env.DEV && console.log(`[TemplateSelector] Loaded template: ${template.name}`);
+      logger.debug(`[TemplateSelector] Loaded template: ${template.name}`);
     } catch (error) {
       console.error('[TemplateSelector] Error loading template:', error);
       alert(`Erro ao carregar template: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);

@@ -3,6 +3,7 @@
  * Incluindo resize completo (ETAPA 8)
  */
 
+import { logger } from '../../utils/logger';
 import { type FC, useRef, useState, useCallback, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import type { Position, Size } from '../../types/editor';
@@ -193,7 +194,7 @@ export const FigmaCanvasV2: FC = () => {
           height: (maxY - minY) + (padding * 2),
         };
 
-        import.meta.env.DEV && console.log('🔒 [WRAPPER FROZEN + POSITION LOCKED]', {
+        logger.debug('🔒 [WRAPPER FROZEN + POSITION LOCKED]', {
           elementId,
           frozenWrapper,
           elementPosition: element.position,
@@ -207,7 +208,7 @@ export const FigmaCanvasV2: FC = () => {
       }
     } else {
       // DESCONGELAR: remover wrapper salvo + DESBLOQUEAR POSITION
-      import.meta.env.DEV && console.log('🔓 [WRAPPER UNFROZEN + POSITION UNLOCKED]', { elementId });
+      logger.debug('🔓 [WRAPPER UNFROZEN + POSITION UNLOCKED]', { elementId });
       setFrozenWrappers(prev => {
         const newMap = new Map(prev);
         newMap.delete(elementId);
@@ -230,7 +231,7 @@ export const FigmaCanvasV2: FC = () => {
       if (element) {
         // Se a position atual for diferente da travada, FORCE de volta
         if (element.position.x !== lockedPos.x || element.position.y !== lockedPos.y) {
-          import.meta.env.DEV && console.log('⚠️ [POSITION FORCED BACK]', {
+          logger.debug('⚠️ [POSITION FORCED BACK]', {
             elementId,
             attempted: element.position,
             forcedTo: lockedPos,
@@ -346,7 +347,7 @@ export const FigmaCanvasV2: FC = () => {
   // Canvas pointer down
   const handleCanvasPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      import.meta.env.DEV && console.log('[FigmaCanvasV2] 🖱️ handleCanvasPointerDown - activeTool:', activeTool, 'interactionMode:', interactionMode);
+      logger.debug('[FigmaCanvasV2] 🖱️ handleCanvasPointerDown - activeTool:', activeTool, 'interactionMode:', interactionMode);
 
       if (e.button !== 0) return;
 
@@ -390,16 +391,16 @@ export const FigmaCanvasV2: FC = () => {
 
       // Hit test
       const clickedElement = findTopElementAtPoint(canvasPos, elements, zoomDecimal);
-      import.meta.env.DEV && console.log('[FigmaCanvasV2] === CLICK DEBUG ===');
-      import.meta.env.DEV && console.log('[FigmaCanvasV2] Canvas position:', canvasPos);
-      import.meta.env.DEV && console.log('[FigmaCanvasV2] Elements count:', elements.length);
-      import.meta.env.DEV && console.log('[FigmaCanvasV2] Clicked element:', clickedElement);
-      import.meta.env.DEV && console.log('[FigmaCanvasV2] Current selectedElementIds:', selectedElementIds);
+      logger.debug('[FigmaCanvasV2] === CLICK DEBUG ===');
+      logger.debug('[FigmaCanvasV2] Canvas position:', canvasPos);
+      logger.debug('[FigmaCanvasV2] Elements count:', elements.length);
+      logger.debug('[FigmaCanvasV2] Clicked element:', clickedElement);
+      logger.debug('[FigmaCanvasV2] Current selectedElementIds:', selectedElementIds);
 
       if (clickedElement) {
-        import.meta.env.DEV && console.log('[FigmaCanvasV2] ✅ Element clicked! Type:', clickedElement.type, 'ID:', clickedElement.id);
+        logger.debug('[FigmaCanvasV2] ✅ Element clicked! Type:', clickedElement.type, 'ID:', clickedElement.id);
         if (e.shiftKey) {
-          import.meta.env.DEV && console.log('[FigmaCanvasV2] Shift key pressed, toggling selection');
+          logger.debug('[FigmaCanvasV2] Shift key pressed, toggling selection');
           toggleSelectElement(clickedElement.id);
         } else {
           // Determinar quais elementos serão arrastados
@@ -409,11 +410,11 @@ export const FigmaCanvasV2: FC = () => {
 
           // Se não estava selecionado, selecionar agora
           if (!selectedElementIds.includes(clickedElement.id)) {
-            import.meta.env.DEV && console.log('[FigmaCanvasV2] 🔵 Element not selected, calling setSelectedElement with:', clickedElement.id);
+            logger.debug('[FigmaCanvasV2] 🔵 Element not selected, calling setSelectedElement with:', clickedElement.id);
             setSelectedElement(clickedElement.id);
-            import.meta.env.DEV && console.log('[FigmaCanvasV2] setSelectedElement called, waiting for state update...');
+            logger.debug('[FigmaCanvasV2] setSelectedElement called, waiting for state update...');
           } else {
-            import.meta.env.DEV && console.log('[FigmaCanvasV2] Element already selected');
+            logger.debug('[FigmaCanvasV2] Element already selected');
           }
 
           setSelection((prev) => ({
@@ -692,7 +693,7 @@ export const FigmaCanvasV2: FC = () => {
       selectedElementIds.forEach((id) => {
         // ⛔ NÃO atualizar position se elemento está em resize (linha)
         if (frozenWrappers.has(id)) {
-          import.meta.env.DEV && console.log('⛔ [DRAG PREVENTED] Elemento em resize, não atualizar position:', id);
+          logger.debug('⛔ [DRAG PREVENTED] Elemento em resize, não atualizar position:', id);
           return;
         }
 
@@ -846,7 +847,7 @@ export const FigmaCanvasV2: FC = () => {
             // Se a linha está sendo redimensionada, usar wrapper CONGELADO
             const frozenWrapper = frozenWrappers.get(element.id);
             if (frozenWrapper) {
-              import.meta.env.DEV && console.log('✅ [WRAPPER] Usando FROZEN wrapper:', {
+              logger.debug('✅ [WRAPPER] Usando FROZEN wrapper:', {
                 elementId: element.id,
                 frozenWrapper,
                 currentLineData: element.lineData,
@@ -914,7 +915,7 @@ export const FigmaCanvasV2: FC = () => {
               }}
               // 🎯 Para imagens com imageData: bloquear propagação de eventos para o canvas
               onPointerDown={(element.type === 'image' && element.imageData) ? (e) => {
-                import.meta.env.DEV && console.log('[FigmaCanvasV2] Wrapper interceptou pointerDown na imagem, bloqueando propagação');
+                logger.debug('[FigmaCanvasV2] Wrapper interceptou pointerDown na imagem, bloqueando propagação');
                 e.stopPropagation();
               } : undefined}
             >

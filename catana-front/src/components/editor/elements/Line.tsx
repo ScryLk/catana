@@ -11,6 +11,7 @@
  * - Atalhos: Shift (snap), Esc (cancelar), Delete (remover)
  */
 
+import { logger } from '../../../utils/logger';
 import { type FC, useState, useEffect, useRef } from 'react';
 import type { LineData } from '../../../types/editor';
 import { applyAngleSnap, getAngle, getDistance, type Point } from '../../../utils/coordinateUtils';
@@ -165,7 +166,7 @@ export const Line: FC<LineProps> = ({
       elementPosition: { ...elementPosition }, // Position FIXA (NUNCA muda)
     };
 
-    import.meta.env.DEV && console.log('🎯 [RESIZE START - NOVA ABORDAGEM]', {
+    logger.debug('🎯 [RESIZE START - NOVA ABORDAGEM]', {
       handle,
       elementPosition, // FIXO
       startAbsolute,
@@ -295,7 +296,7 @@ export const Line: FC<LineProps> = ({
             },
           };
 
-          import.meta.env.DEV && console.log('📍 [RESIZE MOVE - NOVA ABORDAGEM]', {
+          logger.debug('📍 [RESIZE MOVE - NOVA ABORDAGEM]', {
             mouseAbsolute,
             anchorPointAbsolute: snapshot.anchorPointAbsolute, // FIXO
             elementPosition: snapshot.elementPosition, // FIXO
@@ -357,7 +358,7 @@ export const Line: FC<LineProps> = ({
 
       // Commit único
       if (previewLine) {
-        import.meta.env.DEV && console.log('✅ [RESIZE END - COMMIT]', {
+        logger.debug('✅ [RESIZE END - COMMIT]', {
           elementPosition,
           finalLine: { start: previewLine.start, end: previewLine.end },
           wasResizing,

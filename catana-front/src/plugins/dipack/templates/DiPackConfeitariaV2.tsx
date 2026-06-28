@@ -1,3 +1,4 @@
+import { logger } from '../../../utils/logger';
 import type { FC } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -32,9 +33,9 @@ export const DiPackConfeitariaV2: FC<DiPackConfeiteriaProps> = ({
   // Usar produtos passados via props
   const products = propsProducts ?? [];
 
-  import.meta.env.DEV && console.log('[DiPackConfeitaria] Produtos recebidos:', products.length, products);
-  import.meta.env.DEV && console.log('[DiPackConfeitaria] Render. Page:', pageNumber, 'Products count:', products.length, 'Props passed?', !!propsProducts);
-  import.meta.env.DEV && console.log('[DiPackConfeitaria] First product:', products[0]);
+  logger.debug('[DiPackConfeitaria] Produtos recebidos:', products.length, products);
+  logger.debug('[DiPackConfeitaria] Render. Page:', pageNumber, 'Products count:', products.length, 'Props passed?', !!propsProducts);
+  logger.debug('[DiPackConfeitaria] First product:', products[0]);
 
   return (
     <div
