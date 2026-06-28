@@ -25,6 +25,8 @@ class Command(BaseCommand):
                             help=f'Seções (só com --estrutura custom). Opções: {", ".join(SECOES_CANONICAS)}')
         parser.add_argument('--b2b', action='store_true', help='Inclui a seção de atacado/B2B.')
         parser.add_argument('--periodo', default=None, help='Rótulo de validade/campanha (ex.: "Primavera 2026").')
+        parser.add_argument('--sem-premium', action='store_true',
+                            help='Desliga a identidade visual premium (gera o catálogo temático limpo).')
 
     def handle(self, *args, **opts):
         if not opts.get('tema') and not opts.get('manifest'):
@@ -37,6 +39,7 @@ class Command(BaseCommand):
             secoes=opts.get('secoes'),
             b2b=opts.get('b2b'),
             periodo=opts.get('periodo'),
+            identidade_premium=not opts.get('sem_premium'),
         )
 
         n_paginas = catalog.pages.count()
