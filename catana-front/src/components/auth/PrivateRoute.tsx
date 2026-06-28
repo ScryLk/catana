@@ -1,6 +1,6 @@
 import { type FC, type ReactNode, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthStore, AUTO_LOGIN_ENABLED } from '../../store/authStore';
+import { useAuthStore, isAutoLoginSettled } from '../../store/authStore';
 import { LoadingScreen } from '../common/LoadingScreen';
 
 interface PrivateRouteProps {
@@ -11,19 +11,17 @@ export const PrivateRoute: FC<PrivateRouteProps> = ({ children }) => {
   const { isAuthenticated, checkAuth, autoLogin } = useAuthStore();
   const location = useLocation();
 
-  const hasToken =
-    typeof window !== 'undefined' && !!localStorage.getItem('access_token');
-  // Enquanto o login automático tenta autenticar, seguramos a navegação.
-  const [checking, setChecking] = useState(
-    AUTO_LOGIN_ENABLED && !(isAuthenticated && hasToken)
-  );
+  // Segura a renderização até o login fresco do boot concluir (garante token
+  // válido antes de qualquer requisição protegida). Em navegação SPA o boot já
+  // está resolvido → isAutoLoginSettled() = true → sem loading.
+  const [checking, setChecking] = useState(!isAutoLoginSettled());
 
   useEffect(() => {
     checkAuth();
-    if (AUTO_LOGIN_ENABLED && !(isAuthenticated && hasToken)) {
-      autoLogin().finally(() => setChecking(false));
-    } else {
+    if (isAutoLoginSettled()) {
       setChecking(false);
+    } else {
+      autoLogin().finally(() => setChecking(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

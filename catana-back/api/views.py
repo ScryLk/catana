@@ -628,8 +628,14 @@ class CatalogViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return queryset.none()
         if not user.is_superuser:
-            # Users can only see catalogs from their organizations or personal ones
-            queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
+            # Users can only see catalogs from their organizations or personal ones.
+            # Catálogos de demonstração (is_demo) são públicos/"para divulgação":
+            # legíveis por qualquer usuário autenticado (mesmo de outra org).
+            queryset = queryset.filter(
+                Q(organization__in=user.organizations.all())
+                | Q(created_by=user)
+                | Q(is_demo=True)
+            )
 
         org_id = self.request.query_params.get('organization')
         sede_id = self.request.query_params.get('sede')
@@ -855,6 +861,17 @@ class CatalogViewSet(viewsets.ModelViewSet):
 class PageViewSet(viewsets.ModelViewSet):
     queryset = Page.objects.all()
     serializer_class = PageSerializer
+    # O editor carrega TODAS as páginas de um catálogo de uma vez. Sem paginação
+    # (o ?page= da paginação colidiria e o limite de 24 truncaria catálogos
+    # maiores); filtra pela FK ?catalog=.
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        catalog_id = self.request.query_params.get('catalog')
+        if catalog_id:
+            queryset = queryset.filter(catalog_id=catalog_id)
+        return queryset
 
 class ComponentViewSet(viewsets.ModelViewSet):
     queryset = Component.objects.all()
@@ -878,6 +895,17 @@ class ComponentViewSet(viewsets.ModelViewSet):
 class PageComponentViewSet(viewsets.ModelViewSet):
     queryset = PageComponent.objects.all()
     serializer_class = PageComponentSerializer
+    # O editor carrega TODOS os componentes de uma página. Sem paginação: o
+    # ?page= reservado da paginação colidiria com o filtro por FK (?page=<id>)
+    # e causava 404 "Invalid page".
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        page_id = self.request.query_params.get('page')
+        if page_id:
+            queryset = queryset.filter(page_id=page_id)
+        return queryset
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()

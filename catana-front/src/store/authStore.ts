@@ -17,6 +17,14 @@ const DEFAULT_USER = {
   role: 'admin',
 };
 
+// Boot do auto-login: roda UMA vez por carregamento de página (não por
+// navegação SPA). Garante um token válido antes de qualquer requisição
+// protegida — sem isso, no reload o editor dispara /catalogs e /pages antes do
+// token e a corrida de 401 fazia o catálogo "sumir".
+let autoLoginPromise: Promise<void> | null = null;
+let autoLoginDone = false;
+export const isAutoLoginSettled = () => autoLoginDone || !AUTO_LOGIN_ENABLED;
+
 interface User {
   id: number;
   name: string;
@@ -161,30 +169,34 @@ export const useAuthStore = create<AuthStore>()(
       // (banco novo), registra e já fica autenticado. Idempotente.
       autoLogin: async () => {
         if (!AUTO_LOGIN_ENABLED) return;
-
-        const token = localStorage.getItem('access_token');
-        if (get().isAuthenticated && token) return; // já logado
-
-        try {
-          await get().login({
-            username: DEFAULT_USER.username,
-            password: DEFAULT_USER.password,
-          });
-        } catch {
-          // Usuário padrão pode não existir ainda — cria e autentica.
+        // Uma sessão fresca por carregamento de página (login real → token novo),
+        // memoizada para não relogar a cada navegação SPA.
+        if (autoLoginPromise) return autoLoginPromise;
+        autoLoginPromise = (async () => {
           try {
-            await get().register({
+            await get().login({
               username: DEFAULT_USER.username,
-              email: DEFAULT_USER.email,
               password: DEFAULT_USER.password,
-              role: DEFAULT_USER.role,
             });
-          } catch (err) {
-            if (import.meta.env.DEV) {
-              console.error('[autoLogin] falha ao criar/logar usuário padrão', err);
+          } catch {
+            // Usuário padrão pode não existir (banco novo) — cria e autentica.
+            try {
+              await get().register({
+                username: DEFAULT_USER.username,
+                email: DEFAULT_USER.email,
+                password: DEFAULT_USER.password,
+                role: DEFAULT_USER.role,
+              });
+            } catch (err) {
+              if (import.meta.env.DEV) {
+                console.error('[autoLogin] falha ao criar/logar usuário padrão', err);
+              }
             }
+          } finally {
+            autoLoginDone = true;
           }
-        }
+        })();
+        return autoLoginPromise;
       },
 
       register: async (credentials) => {
