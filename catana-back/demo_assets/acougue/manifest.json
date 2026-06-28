@@ -1,0 +1,119 @@
+{
+  "tema": "acougue",
+  "empresa": {
+    "nome": "Açougue Corte Nobre",
+    "slogan": "A carne certa para o seu churrasco",
+    "sobre": "Carnes selecionadas, maturação artesanal e atendimento de quem entende do corte. Do boi premium ao tempero da casa, qualidade que você vê e sente.",
+    "contato": {
+      "telefone": "(11) 3333-1010",
+      "endereco": "Av. do Boi, 700 - Centro, São Paulo - SP",
+      "instagram": "@cortenobre",
+      "whatsapp": "(11) 98888-1010"
+    },
+    "logo": null
+  },
+  "categorias": [
+    "Bovinos",
+    "Suínos",
+    "Aves",
+    "Linguiças",
+    "Temperos"
+  ],
+  "b2b": {
+    "titulo": "Atacado para restaurantes e churrascarias",
+    "faixas": [
+      {
+        "quantidade": "5 a 20 kg",
+        "desconto": "8% off"
+      },
+      {
+        "quantidade": "21 a 50 kg",
+        "desconto": "15% off"
+      },
+      {
+        "quantidade": "50+ kg",
+        "desconto": "22% off"
+      }
+    ],
+    "observacao": "Entrega refrigerada própria. Pedidos com 24h de antecedência."
+  },
+  "produtos": [
+    {
+      "nome": "Picanha Premium",
+      "descricao": "Peça maturada, capa de gordura na medida.",
+      "preco": "89.90",
+      "categoria": "Bovinos",
+      "imagem": "picanha-premium.jpg"
+    },
+    {
+      "nome": "Maminha",
+      "descricao": "Macia e suculenta, ideal para a brasa.",
+      "preco": "54.90",
+      "categoria": "Bovinos",
+      "imagem": "maminha.jpg"
+    },
+    {
+      "nome": "Costela Ripa",
+      "descricao": "Corte tradicional para churrasco de fogo de chão.",
+      "preco": "39.90",
+      "categoria": "Bovinos",
+      "imagem": "costela-ripa.jpg"
+    },
+    {
+      "nome": "Fraldinha",
+      "descricao": "Sabor marcante, ótima na grelha.",
+      "preco": "59.90",
+      "categoria": "Bovinos",
+      "imagem": "fraldinha.jpg"
+    },
+    {
+      "nome": "Pernil Suíno",
+      "descricao": "Peça inteira sem osso, pronta para assar.",
+      "preco": "24.90",
+      "categoria": "Suínos",
+      "imagem": "pernil-suino.jpg"
+    },
+    {
+      "nome": "Costelinha BBQ",
+      "descricao": "Suína, perfeita para defumar.",
+      "preco": "29.90",
+      "categoria": "Suínos",
+      "imagem": "costelinha-bbq.jpg"
+    },
+    {
+      "nome": "Coxa e Sobrecoxa",
+      "descricao": "Frango caipira, sabor de antigamente.",
+      "preco": "15.90",
+      "categoria": "Aves",
+      "imagem": "coxa-e-sobrecoxa.jpg"
+    },
+    {
+      "nome": "Peito de Frango",
+      "descricao": "Filé limpo, embalado a vácuo.",
+      "preco": "22.90",
+      "categoria": "Aves",
+      "imagem": "peito-de-frango.jpg"
+    },
+    {
+      "nome": "Linguiça Artesanal",
+      "descricao": "Receita da casa, suína apimentada.",
+      "preco": "27.90",
+      "categoria": "Linguiças",
+      "imagem": "linguica-artesanal.jpg"
+    },
+    {
+      "nome": "Linguiça de Queijo",
+      "descricao": "Recheada, derrete na brasa.",
+      "preco": "31.90",
+      "categoria": "Linguiças",
+      "imagem": "linguica-de-queijo.jpg"
+    },
+    {
+      "nome": "Tempero da Casa",
+      "descricao": "Mix de ervas e sal grosso. 200g.",
+      "preco": "12.90",
+      "categoria": "Temperos",
+      "imagem": "tempero-da-casa.jpg"
+    }
+  ]
+}
