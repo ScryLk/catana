@@ -65,7 +65,8 @@ class ProductService {
 
     if (Array.isArray(response.data)) {
       products = response.data;
-      total = products.length;
+      // .count é preservado (não-enumerável) pelo interceptor quando paginado.
+      total = (response.data as any).count ?? products.length;
     } else if (response.data.results) {
       products = response.data.results;
       total = response.data.count;
@@ -88,7 +89,8 @@ class ProductService {
 
     if (Array.isArray(response.data)) {
       products = response.data;
-      total = products.length;
+      // .count é preservado (não-enumerável) pelo interceptor quando paginado.
+      total = (response.data as any).count ?? products.length;
     } else if (response.data.results) {
       products = response.data.results;
       total = response.data.count;

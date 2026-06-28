@@ -41,9 +41,39 @@ api.interceptors.request.use(
   }
 );
 
+// Backend usa paginação global do DRF: listagens vêm como
+// { count, next, previous, results: [...] }. Os services do front esperam
+// um array. Aqui desembrulhamos para o array, preservando os metadados de
+// paginação como props NÃO-enumeráveis (results/count/next/previous), de
+// modo que tanto `data.map(...)` quanto `data.count` continuem funcionando.
+function unwrapPaginated(data: any): any {
+  if (
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    Array.isArray(data.results) &&
+    'count' in data &&
+    'next' in data &&
+    'previous' in data
+  ) {
+    const arr = data.results;
+    Object.defineProperties(arr, {
+      count: { value: data.count, enumerable: false, configurable: true },
+      next: { value: data.next, enumerable: false, configurable: true },
+      previous: { value: data.previous, enumerable: false, configurable: true },
+      results: { value: arr, enumerable: false, configurable: true },
+    });
+    return arr;
+  }
+  return data;
+}
+
 // Interceptor de resposta - trata erros e refresh de token
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.data = unwrapPaginated(response.data);
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as any & { _retry?: boolean };
 
