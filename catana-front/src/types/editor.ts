@@ -525,4 +525,6 @@ export interface EditorStore extends CatalogState {
   setDesignTokens: (tokens: import('./designTokens').DesignTokens) => void;
   updateDesignTokens: (updates: Partial<import('./designTokens').DesignTokens>) => void;
   resetDesignTokens: () => void;
+  // INC-06: liga os elementos ao tema global, trocando cores/fontes por referências $tokens.*
+  applyThemeToElements: () => void;
 }

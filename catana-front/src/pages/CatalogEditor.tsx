@@ -22,11 +22,13 @@ import {
 } from '../utils/alignmentHelpers';
 import { loadImportedCatalog, isImportedCatalog } from '../services/catalogLoader.service';
 import { catalogService } from '../services/catalogService';
+import { DesignTokensPanel } from '../components/editor/DesignTokensPanel';
 import { toast } from 'sonner';
 
 const CatalogEditorContent: FC = () => {
   const location = useLocation();
   const [currentCatalogId, setCurrentCatalogId] = useState<number | null>(null);
+  const [showThemePanel, setShowThemePanel] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showPagesManager, setShowPagesManager] = useState(false);
@@ -203,8 +205,12 @@ const CatalogEditorContent: FC = () => {
           onShowPreview={() => { setShowPDFPreview(true); }}
           onDownloadPDF={handleDownloadPDF}
           onSave={handleSaveContent}
+          onOpenTheme={() => setShowThemePanel(true)}
         />
       )}
+
+      {/* INC-06: painel de tema global */}
+      <DesignTokensPanel open={showThemePanel} onClose={() => setShowThemePanel(false)} />
 
       {/* Main Layout */}
       <div className={`flex h-full ${uiVisible ? 'pt-14' : ''}`}>

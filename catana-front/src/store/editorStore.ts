@@ -35,7 +35,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     rightSidebarTab: 'properties',
     interactionMode: 'select',
     activeTool: 'select',
-    designTokens: undefined, // Tokens podem ser definidos via import ou manualmente
+    designTokens: DEFAULT_DESIGN_TOKENS, // INC-06: tema global ativo por padrão (editável no painel de Tema)
 
     // Helper to get current page
     getCurrentPage: () => {
@@ -875,7 +875,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         rightSidebarTab: 'properties',
         interactionMode: 'select',
         activeTool: 'select',
-        designTokens: undefined,
+        designTokens: DEFAULT_DESIGN_TOKENS,
       });
     },
 
@@ -893,7 +893,55 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     resetDesignTokens: () => {
-      set({ designTokens: undefined });
+      set({ designTokens: DEFAULT_DESIGN_TOKENS });
+    },
+
+    applyThemeToElements: () => {
+      // INC-06: aplica o tema "de um clique" trocando cores/fontes literais por
+      // referências $tokens.*; a partir daí, editar o tema atualiza tudo ao vivo.
+      set((state) => {
+        const mapElement = (el: CatalogElement): CatalogElement => {
+          const type = el.type as string;
+          const style = { ...el.style };
+          const textData = el.textData ? { ...el.textData } : el.textData;
+
+          if (type.startsWith('text')) {
+            style.textColor = '$tokens.colors.text.primary';
+            style.fontFamily = '$tokens.typography.body.fontFamily';
+            if (textData) {
+              textData.textColor = '$tokens.colors.text.primary';
+              textData.fontFamily = '$tokens.typography.body.fontFamily';
+            }
+          } else if (
+            type.startsWith('product') ||
+            type.startsWith('shape') ||
+            type === 'banner' ||
+            type === 'highlight-banner' ||
+            type === 'footer'
+          ) {
+            style.backgroundColor = '$tokens.colors.surface';
+            if (el.style?.borderWidth) {
+              style.borderColor = '$tokens.colors.border';
+            }
+          }
+
+          return { ...el, style, textData };
+        };
+
+        const newPages = state.pages.map((page) => ({
+          ...page,
+          elements: page.elements.map(mapElement),
+        }));
+
+        const newHistory = state.history.slice(0, state.historyIndex + 1);
+        newHistory.push(newPages);
+
+        return {
+          pages: newPages,
+          history: newHistory.slice(-MAX_HISTORY),
+          historyIndex: newHistory.length - 1,
+        };
+      });
     },
   };
 });

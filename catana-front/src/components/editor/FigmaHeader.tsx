@@ -18,6 +18,7 @@ import {
   Check,
   Loader2,
   Save,
+  Palette,
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAuthStore } from '../../store/authStore';
@@ -26,11 +27,12 @@ interface Props {
   onShowPreview?: () => void;
   onDownloadPDF?: () => void;
   onSave?: () => void | Promise<void>;
+  onOpenTheme?: () => void;
 }
 
 type CatalogStatus = 'draft' | 'published' | 'archived';
 
-export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF, onSave }) => {
+export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF, onSave, onOpenTheme }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const {
@@ -218,6 +220,17 @@ export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF, onSave })
         </div>
 
         <div className="h-4 w-px bg-gray-300/50 dark:bg-zinc-700/50 mx-1" />
+
+        {/* Tema global */}
+        {onOpenTheme && (
+          <button
+            onClick={onOpenTheme}
+            className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-zinc-800/50 rounded-md transition-colors"
+            title="Tema global (cores e tipografia)"
+          >
+            <Palette className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Preview Toggle */}
         <button

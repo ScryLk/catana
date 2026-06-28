@@ -137,12 +137,12 @@ Aparência + posições ficam espalhadas em `PageComponent` (geometria) + `Compo
 - **Salvar o conteúdo do editor também funciona:** `catalogService.saveCatalogContent(id, pages)` faz `POST /api/catalogs/{id}/save_content/`. A action no `CatalogViewSet` recria `Page/Component/PageComponent` numa **transação**, de forma **idempotente e sem órfãos**. O botão "Salvar" do `FigmaHeader` dispara esse save (além do `downloadCatalogJSON`/export PDF, que continuam).
 - Os viewsets CRUD genéricos de `Page/Component/PageComponent` existem em `urls.py`, mas a persistência do editor passa pela action transacional acima (não por chamadas CRUD avulsas).
 
-### Aparência: 3 camadas, mal conectadas
-1. **Por elemento (o que de fato funciona):** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização é **manual, elemento a elemento**, no PropertiesPanel.
-2. **Design Tokens globais (existe na arquitetura, desligado da UI):** sistema completo em `src/types/designTokens.ts` (`colors`/`typography`/`spacing`/`borderRadius`/`shadows` + `DEFAULT_DESIGN_TOKENS`), resolvedor `$tokens.colors.primary` em `src/services/referenceResolver.service.ts`, e ações `setDesignTokens/updateDesignTokens` no store. **Mas** começa `undefined`, só é preenchido via `Theme` do backend ou JSON importado, **não há painel para editar tokens**, e os templates DiPACK usam valores fixos (não referências `$tokens.*`). O "tema global de um clique" **não está exposto ao usuário**.
-3. **Templates (plugin DiPACK):** componentes React **hardcoded** em `src/plugins/dipack/templates/` (`DiPackCover`, `DiPackConfeitariaV2`…), visual fixo da marca, **não parametrizável** por cor/fonte. Inserir template = inserir um bloco fixo.
+### Aparência: 3 camadas
+1. **Por elemento:** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização manual, elemento a elemento, no PropertiesPanel.
+2. **Design Tokens globais (conectado — INC-06):** sistema em `src/types/designTokens.ts` (`colors`/`typography`/`spacing`/`borderRadius`/`shadows` + `DEFAULT_DESIGN_TOKENS`). O store **começa com `DEFAULT_DESIGN_TOKENS`** e há **painel de tema** (`DesignTokensPanel`, botão 🎨 no `FigmaHeader`): paleta, tipografia, presets de um clique e "Aplicar tema aos elementos" (`applyThemeToElements` troca cores/fontes literais por referências `$tokens.*`). O `ElementRenderer` **resolve `$tokens.*`** ao vivo via `utils/themeResolve.ts` (sobre o resolvedor de `types/designTokens.ts`), então editar o tema atualiza tudo na hora.
+3. **Templates (plugin DiPACK):** componentes React **hardcoded** em `src/plugins/dipack/templates/`, visual fixo da marca, **ainda não parametrizável** por token. Inserir template = inserir um bloco fixo.
 
-**Resumo:** hoje mudar aparência = estilizar na mão OU inserir template DiPACK fixo. **Não existe** seletor global de tema (paleta+tipografia+layout). A infra de design tokens existe mas está desconectada da UI e da persistência.
+**Resumo:** o "tema global de um clique" (paleta + tipografia) está exposto ao usuário e ligado ao renderer. Falta só parametrizar os templates DiPACK por tokens.
 
 ---
 

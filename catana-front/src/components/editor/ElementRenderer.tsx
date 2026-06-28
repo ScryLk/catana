@@ -6,6 +6,7 @@ import { LineFigma } from './elements/LineFigma';
 import { ImageFigma } from './elements/ImageFigma';
 import { pluginRegistry } from '../../plugins/registry';
 import { useEditorStore } from '../../store/editorStore';
+import { resolveElementTokens } from '../../utils/themeResolve';
 
 interface ElementRendererProps {
   element: CatalogElement;
@@ -21,7 +22,7 @@ interface ElementRendererProps {
  * Used both in the canvas and for PDF export.
  */
 export const ElementRenderer: FC<ElementRendererProps> = ({
-  element,
+  element: rawElement,
   isPDF = false,
   isSelected = false,
   onResizeStateChange,
@@ -31,6 +32,10 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
   // Hooks para atualizar e selecionar elementos
   const updateElement = useEditorStore(state => state.updateElement);
   const setSelectedElement = useEditorStore(state => state.setSelectedElement);
+  const designTokens = useEditorStore(state => state.designTokens);
+
+  // INC-06: resolve referências $tokens.* contra o tema global antes de renderizar.
+  const element = resolveElementTokens(rawElement, designTokens);
 
   // Build border properties
   const buildBorderStyle = () => {
