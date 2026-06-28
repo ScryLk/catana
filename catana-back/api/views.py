@@ -628,8 +628,14 @@ class CatalogViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return queryset.none()
         if not user.is_superuser:
-            # Users can only see catalogs from their organizations or personal ones
-            queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
+            # Users can only see catalogs from their organizations or personal ones.
+            # Catálogos de demonstração (is_demo) são públicos/"para divulgação":
+            # legíveis por qualquer usuário autenticado (mesmo de outra org).
+            queryset = queryset.filter(
+                Q(organization__in=user.organizations.all())
+                | Q(created_by=user)
+                | Q(is_demo=True)
+            )
 
         org_id = self.request.query_params.get('organization')
         sede_id = self.request.query_params.get('sede')
