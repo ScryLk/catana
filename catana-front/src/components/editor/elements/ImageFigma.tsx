@@ -83,7 +83,6 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
   } | null>(null);
 
   // Estado atual (preview ou data original)
-  const currentPosition = previewState?.position || position;
   const currentSize = previewState?.size || size;
 
   // ========================================
@@ -379,8 +378,13 @@ export const ImageFigma: FC<ImageFigmaProps> = ({
       <div
         style={{
           position: 'absolute',
-          left: currentPosition.x,
-          top: currentPosition.y,
+          // O wrapper do canvas (FigmaCanvasV2) já posiciona o elemento na sua
+          // posição/tamanho. Aqui apenas preenchemos esse wrapper. Durante
+          // drag/resize aplicamos só o DELTA do preview — sem isto a imagem era
+          // re-posicionada em coords absolutas, gerando DUPLO offset (imagens
+          // flutuando fora do card/página e o card ficando com a imagem vazia).
+          left: previewState ? previewState.position.x - position.x : 0,
+          top: previewState ? previewState.position.y - position.y : 0,
           width: currentSize.width,
           height: currentSize.height,
           cursor: bodyCursor,
