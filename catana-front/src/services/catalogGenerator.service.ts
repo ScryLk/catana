@@ -5,6 +5,7 @@
  * Otimizado para geração por IA (Claude, GPT, etc.)
  */
 
+import { genId } from '../utils/id';
 import type { CatalogExportSchema, ExportPage, ExportElement } from '../types/catalogIO';
 
 /**
@@ -20,7 +21,7 @@ export function generateLogicalId(prefix: 'element' | 'page' | 'group' = 'elemen
   if (prefix === 'page') {
     return `page-${++pageCounter}`;
   }
-  return `group-${Date.now()}`;
+  return genId('group');
 }
 
 /**

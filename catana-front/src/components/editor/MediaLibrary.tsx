@@ -11,7 +11,7 @@ interface MediaLibraryProps {
 }
 
 export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selectionMode = false }) => {
-  console.log('[MediaLibrary] Componente montado');
+  import.meta.env.DEV && console.log('[MediaLibrary] Componente montado');
   const { assets, addAsset, removeAsset } = useAssetStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -37,13 +37,13 @@ export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selecti
     try {
       setIsLoadingApi(true);
       setLoadError(null);
-      console.log('[MediaLibrary] Carregando imagens da API /media...');
+      import.meta.env.DEV && console.log('[MediaLibrary] Carregando imagens da API /media...');
 
       const images = await mediaService.getMedia({
         media_type: 'image',
       });
 
-      console.log('[MediaLibrary] Imagens da API carregadas:', images);
+      import.meta.env.DEV && console.log('[MediaLibrary] Imagens da API carregadas:', images);
       setApiImages(images);
     } catch (error: any) {
       console.error('[MediaLibrary] Erro ao carregar imagens da API:', error);
@@ -68,7 +68,7 @@ export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selecti
 
   // Carregar imagens ao montar o componente
   useEffect(() => {
-    console.log('[MediaLibrary] useEffect executado, carregando imagens...');
+    import.meta.env.DEV && console.log('[MediaLibrary] useEffect executado, carregando imagens...');
     loadApiImages();
   }, []);
 
@@ -77,7 +77,7 @@ export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selecti
 
     setIsUploading(true);
     try {
-      console.log('[MediaLibrary] Fazendo upload de', files.length, 'arquivo(s)...');
+      import.meta.env.DEV && console.log('[MediaLibrary] Fazendo upload de', files.length, 'arquivo(s)...');
 
       // Upload para localStorage (local)
       const localPromises = Array.from(files).map(file => addAsset(file));
@@ -89,7 +89,7 @@ export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selecti
             file,
             name: file.name,
           });
-          console.log('[MediaLibrary] Upload para API concluído:', uploaded);
+          import.meta.env.DEV && console.log('[MediaLibrary] Upload para API concluído:', uploaded);
           return uploaded;
         } catch (error) {
           console.error('[MediaLibrary] Erro no upload para API:', error);
@@ -133,9 +133,9 @@ export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selecti
   };
 
   const handleConfirmSelection = () => {
-    console.log('[MediaLibrary] Confirmando seleção:', selectedAssetId);
+    import.meta.env.DEV && console.log('[MediaLibrary] Confirmando seleção:', selectedAssetId);
     if (selectedAssetId && onSelect) {
-      console.log('[MediaLibrary] Chamando onSelect com:', selectedAssetId);
+      import.meta.env.DEV && console.log('[MediaLibrary] Chamando onSelect com:', selectedAssetId);
       onSelect(selectedAssetId);
     } else {
       console.warn('[MediaLibrary] Não há imagem selecionada ou callback onSelect');
@@ -284,7 +284,7 @@ export const MediaLibrary: FC<MediaLibraryProps> = ({ onSelect, onClose, selecti
                     <div
                       key={`api-${media.id}`}
                       onClick={() => {
-                        console.log('[MediaLibrary] Imagem da API clicada:', media.file_url);
+                        import.meta.env.DEV && console.log('[MediaLibrary] Imagem da API clicada:', media.file_url);
                         if (selectionMode) {
                           setSelectedAssetId(media.file_url);
                         } else if (onSelect) {

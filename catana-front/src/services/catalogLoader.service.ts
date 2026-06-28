@@ -5,6 +5,8 @@
  * Aplica automaticamente as regras de layout profissional
  */
 
+import { genId } from '../utils/id';
+import api from './api';
 import { catalogService } from './catalogService';
 import { processPage, validateCatalog, generateValidationReport } from './layoutEngine.service';
 import type { CatalogElement, CatalogPage } from '../types/editor';
@@ -59,50 +61,25 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
     const catalog = await catalogService.getCatalog(catalogId);
 
     // 2. Buscar páginas do catálogo
-    const response = await fetch(`http://localhost:8000/api/pages/?catalog=${catalogId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to load pages: ${response.statusText}`);
-    }
-
-    const backendPages: BackendPage[] = await response.json();
+    const backendPages: BackendPage[] = (
+      await api.get(`/api/pages/?catalog=${catalogId}`)
+    ).data;
 
     // 3. Para cada página, buscar seus componentes
     const pagesWithComponents = await Promise.all(
       backendPages.map(async (page) => {
-        const componentsResponse = await fetch(
-          `http://localhost:8000/api/page-components/?page=${page.id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            }
-          }
-        );
-
-        if (!componentsResponse.ok) {
+        let pageComponents: BackendPageComponent[];
+        try {
+          pageComponents = (await api.get(`/api/page-components/?page=${page.id}`)).data;
+        } catch {
           console.warn(`Failed to load components for page ${page.id}`);
           return { ...page, components: [] };
         }
 
-        const pageComponents = await componentsResponse.json();
-
         // Buscar dados completos dos componentes
         const componentsWithData = await Promise.all(
           pageComponents.map(async (pc: any) => {
-            const componentResponse = await fetch(
-              `http://localhost:8000/api/components/${pc.component}/`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                }
-              }
-            );
-
-            const component = await componentResponse.json();
+            const component = (await api.get(`/api/components/${pc.component}/`)).data;
             return {
               ...pc,
               component
@@ -120,18 +97,11 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
     // 4. Buscar Design Tokens do theme (se existir)
     let designTokens: DesignTokens | undefined;
     if (catalog.theme) {
-      const themeResponse = await fetch(
-        `http://localhost:8000/api/themes/${catalog.theme}/`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }
-      );
-
-      if (themeResponse.ok) {
-        const theme = await themeResponse.json();
+      try {
+        const theme = (await api.get(`/api/themes/${catalog.theme}/`)).data;
         designTokens = theme.styles?.designTokens;
+      } catch {
+        // Tema opcional: segue sem design tokens se a requisição falhar.
       }
     }
 
@@ -139,13 +109,13 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
     const editorPages: CatalogPage[] = pagesWithComponents
       .sort((a, b) => a.order - b.order)
       .map((backendPage, index) => {
-        const pageId = `page-${Date.now()}-${index}`;
+        const pageId = genId('page');
 
         // Converter componentes para elementos do editor
         const elements: CatalogElement[] = (backendPage.components || [])
           .sort((a, b) => a.layer - b.layer)
-          .map((pc, elemIndex) => {
-            const elementId = `element-${Date.now()}-${elemIndex}`;
+          .map((pc) => {
+            const elementId = genId('element');
             const originalElement = pc.component.content;
 
             // Criar elemento do editor mesclando dados originais com posicionamento
@@ -214,7 +184,7 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
 
   } catch (error) {
     console.error('[CatalogLoader] Error loading catalog:', error);
-    throw new Error(`Failed to load catalog: ${error.message}`);
+    throw new Error(`Failed to load catalog: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -223,18 +193,7 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
  */
 export async function isImportedCatalog(catalogId: number): Promise<boolean> {
   try {
-    const response = await fetch(
-      `http://localhost:8000/api/pages/?catalog=${catalogId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      }
-    );
-
-    if (!response.ok) return false;
-
-    const pages = await response.json();
+    const pages = (await api.get(`/api/pages/?catalog=${catalogId}`)).data;
     return pages.length > 0;
   } catch {
     return false;
@@ -255,17 +214,17 @@ export function processCatalogWithLayoutRules(catalogJson: any): {
   validation: ReturnType<typeof validateCatalog>;
   report: string;
 } {
-  console.log('[CatalogLoader] Aplicando regras de layout ao catálogo importado...');
+  import.meta.env.DEV && console.log('[CatalogLoader] Aplicando regras de layout ao catálogo importado...');
 
   // 1. Validar catálogo antes de processar
   const validation = validateCatalog(catalogJson);
   const report = generateValidationReport(catalogJson);
 
-  console.log('[CatalogLoader] Relatório de validação:\n', report);
+  import.meta.env.DEV && console.log('[CatalogLoader] Relatório de validação:\n', report);
 
   // 2. Processar cada página aplicando as regras
   const processedPages = catalogJson.pages.map((page: any, pageIndex: number) => {
-    console.log(`[CatalogLoader] Processando página ${pageIndex + 1}/${catalogJson.pages.length}...`);
+    import.meta.env.DEV && console.log(`[CatalogLoader] Processando página ${pageIndex + 1}/${catalogJson.pages.length}...`);
 
     // Determinar tamanho da página (A4 por padrão)
     const pageSize = page.size || 'A4';
@@ -305,7 +264,7 @@ export function processCatalogWithLayoutRules(catalogJson: any): {
     }
   };
 
-  console.log('[CatalogLoader] ✅ Catálogo processado com sucesso!');
+  import.meta.env.DEV && console.log('[CatalogLoader] ✅ Catálogo processado com sucesso!');
 
   return {
     catalog: processedCatalog,

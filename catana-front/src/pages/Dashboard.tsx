@@ -2,14 +2,9 @@ import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
-import { HeroBanner } from '../components/HeroBanner';
 import { StatsCards } from '../components/StatsCards';
 import { RecentCatalogs } from '../components/RecentCatalogs';
-import { PerformanceSection } from '../components/PerformanceSection';
 import { QuickActions } from '../components/QuickActions';
-import { ActivityTimeline } from '../components/ActivityTimeline';
-import { TeamCollaboration } from '../components/TeamCollaboration';
-import { SystemStatus } from '../components/SystemStatus';
 
 
 export const Dashboard: FC = () => {

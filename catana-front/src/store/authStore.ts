@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+// FRG-04: respeita VITE_API_BASE_URL como o resto dos services (api.ts).
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 interface User {
   id: number;
@@ -132,7 +133,7 @@ export const useAuthStore = create<AuthStore>()(
         const token = localStorage.getItem('access_token');
 
         if (user && token) {
-          console.log('User authenticated:', user.name);
+          import.meta.env.DEV && console.log('User authenticated:', user.name);
         } else if (!token && user) {
           // Token expirado mas ainda tem user no store
           set({ user: null, isAuthenticated: false });

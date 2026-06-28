@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC } from 'react';
-import { StatCard } from '@/components/ui/stat-card';
-import { BookOpen, Package, Image, Rocket, Loader2 } from 'lucide-react';
+import { BookOpen, Package, Loader2 } from 'lucide-react';
 import { dashboardService } from '@/services/dashboardService';
 import type { DashboardStats } from '@/types/api';
 

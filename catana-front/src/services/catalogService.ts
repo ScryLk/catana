@@ -1,5 +1,13 @@
 import api from './api';
 import type { Catalog } from '@/types/api';
+import type { CatalogPage } from '@/types/editor';
+
+export interface SaveContentResult {
+  status: string;
+  catalog: number;
+  pages: number;
+  elements: number;
+}
 
 export const catalogService = {
     /**
@@ -71,6 +79,23 @@ export const catalogService = {
 
     async toggleSave(id: number): Promise<{ saved: boolean; count: number }> {
         const response = await api.post<{ saved: boolean; count: number }>(`/api/catalogs/${id}/toggle_save/`);
+        return response.data;
+    },
+
+    /**
+     * INC-01: persiste o conteúdo do editor (páginas/elementos) no backend
+     * de forma transacional, via /api/catalogs/{id}/save_content/.
+     * Recebe as páginas do editorStore e serializa geometria + JSON do elemento.
+     */
+    async saveCatalogContent(id: number, pages: CatalogPage[]): Promise<SaveContentResult> {
+        const payload = {
+            pages: pages.map((page, index) => ({
+                order: typeof page.order === 'number' ? page.order : index,
+                background_image: null,
+                elements: page.elements,
+            })),
+        };
+        const response = await api.post<SaveContentResult>(`/api/catalogs/${id}/save_content/`, payload);
         return response.data;
     },
 

@@ -8,7 +8,7 @@ import { type FC, useState, useEffect, useCallback } from 'react';
 import { Search, Filter, X, Loader2, TrendingUp, Users } from 'lucide-react';
 import { ProfileCard } from '../components/profile/ProfileCard';
 import { publicProfileService } from '../services/publicProfileService';
-import type { ProfileCardData, ProfileSearchFilters, ProfileType, Segment } from '../types/profile';
+import type { ProfileCardData, ProfileSearchFilters } from '../types/profile';
 import { AVAILABLE_SEGMENTS } from '../types/profile';
 
 export const ProfileSearch: FC = () => {

@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { FiSave, FiUpload, FiX } from 'react-icons/fi'; // Using react-icons for consistency within this file initially, or use lucide
-import { Package, Image as ImageIcon } from 'lucide-react'; // Mixing is fine if needed
+import { Image as ImageIcon } from 'lucide-react'; // Mixing is fine if needed
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
@@ -91,7 +91,7 @@ export const CreateProduct: FC = () => {
 
       setFormData({
         name: product.name,
-        sku: product.sku,
+        sku: product.sku || '',
         description: product.description || '',
         category: product.category ? String(product.category) : '',
         price: product.price.toString(),
@@ -242,33 +242,6 @@ export const CreateProduct: FC = () => {
       ...formData,
       category: value,
     });
-  };
-
-  const fillFakeData = () => {
-    const randomId = Math.floor(Math.random() * 1000);
-    const categoryId = categories.length > 0 ? categories[0].id : '';
-
-    setFormData({
-      ...formData,
-      name: `Produto Teste ${randomId}`,
-      sku: `SKU-${randomId}`,
-      description: 'Este é um produto de teste gerado automaticamente com dados fictícios para validação do formulário e layout.',
-      category: categoryId,
-      price: (Math.random() * 500 + 10).toFixed(2),
-      stock: Math.floor(Math.random() * 100).toString(),
-      currency: 'BRL',
-      badge: Math.random() > 0.5 ? 'Novo' : '',
-      // Dropshipping
-      weight: '0.500',
-      width: '15',
-      height: '5',
-      depth: '10',
-      supplier: 'Fornecedor Exemplo Ltda',
-      supplierSku: `FORN-${randomId}`,
-      leadTime: '5',
-      shippingCost: '15.90',
-    });
-    setIsDropshipping(true);
   };
 
   if (loading) {

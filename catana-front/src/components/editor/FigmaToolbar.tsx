@@ -117,7 +117,7 @@ export const FigmaToolbar: FC<Props> = ({ onSaveComponent }) => {
 
   // Função para ativar ferramenta
   const handleSelectTool = (tool: string) => {
-    console.log('[FigmaToolbar] Ativando ferramenta:', tool);
+    import.meta.env.DEV && console.log('[FigmaToolbar] Ativando ferramenta:', tool);
     setActiveTool(tool);
     if (tool === 'select') {
       setInteractionMode('select');
@@ -126,15 +126,15 @@ export const FigmaToolbar: FC<Props> = ({ onSaveComponent }) => {
     // Se for linha, adicionar elemento diretamente
     if (tool === 'line') {
       const defaultData = getDefaultElementData('line');
-      console.log('[FigmaToolbar] defaultData:', defaultData);
+      import.meta.env.DEV && console.log('[FigmaToolbar] defaultData:', defaultData);
       const newElement = {
-        type: 'line',
+        type: 'line' as const,
         position: { x: 100, y: 100 },
         size: getDefaultElementSize('line'),
         style: {},
         ...defaultData,
       };
-      console.log('[FigmaToolbar] Adding element:', newElement);
+      import.meta.env.DEV && console.log('[FigmaToolbar] Adding element:', newElement);
       addElement(newElement);
       // Voltar para modo de seleção
       setActiveTool('select');
@@ -144,15 +144,15 @@ export const FigmaToolbar: FC<Props> = ({ onSaveComponent }) => {
     // Se for QR Code, adicionar elemento diretamente
     if (tool === 'qrcode') {
       const defaultData = getDefaultElementData('qr-code');
-      console.log('[FigmaToolbar] QR Code defaultData:', defaultData);
+      import.meta.env.DEV && console.log('[FigmaToolbar] QR Code defaultData:', defaultData);
       const newElement = {
-        type: 'qr-code',
+        type: 'qr-code' as const,
         position: { x: 200, y: 200 },
         size: getDefaultElementSize('qr-code'),
         style: {},
         ...defaultData,
       };
-      console.log('[FigmaToolbar] Adding QR Code element:', newElement);
+      import.meta.env.DEV && console.log('[FigmaToolbar] Adding QR Code element:', newElement);
       addElement(newElement);
       // Voltar para modo de seleção
       setActiveTool('select');

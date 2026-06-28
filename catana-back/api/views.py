@@ -6,7 +6,8 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Sum, Q
 from django.contrib.auth import update_session_auth_hash
 from .models import (
-    User, Product, Media, MediaFolder, Theme, Catalog, Page, Component, PageComponent, Comment, Activity, Organization, Sede, SedeSharing, Category, UserPreferences, PublicProfile
+    User, Product, Media, MediaFolder, Theme, Catalog, Page, Component, PageComponent, Comment, Activity, Organization, Sede, SedeSharing, Category, UserPreferences, PublicProfile,
+    Notification, Conversation, Message, ProfileFollow, ProfileSave, CatalogLike, CatalogView, BlockedUser
 )
 from .serializers import (
     UserSerializer, ProductSerializer, MediaSerializer, MediaFolderSerializer,
@@ -14,8 +15,40 @@ from .serializers import (
     PageComponentSerializer, CommentSerializer, ActivitySerializer,
     OrganizationSerializer, SedeSerializer, SedeSharingSerializer, CategorySerializer,
     UserProfileSerializer, UserPreferencesSerializer, UpdateProfileSerializer, ChangePasswordSerializer,
-    PublicProductSerializer
+    PublicProductSerializer,
+    NotificationSerializer, MessageSerializer, ConversationSerializer,
+    BulkProductSerializer, BulkImportRequestSerializer,
+    PublicProfileSerializer, PublicProfileCreateSerializer, PublicProfileUpdateSerializer,
+    PublicProfileSettingsSerializer, ProfileFollowSerializer, PublicCatalogSerializer, CatalogLikeSerializer
 )
+from .permissions import IsOrganizationAdmin, CanCreateSede
+
+from rest_framework import serializers
+
+
+# ============================================
+# SEG-02/SEG-03: Autenticação
+# ============================================
+# O padrão global é IsAuthenticated (ver settings REST_FRAMEWORK).
+# Allowlist de endpoints PÚBLICOS (AllowAny explícito):
+#   - register_user            (POST /api/register/)
+#   - TokenObtainPairView      (POST /api/auth/token/)         [simplejwt]
+#   - TokenRefreshView         (POST /api/auth/token/refresh/) [simplejwt]
+#   - ExploreProductViewSet    (GET  /api/explore/products/)
+#   - CatalogViewSet.explore   (GET  /api/catalogs/explore/)
+#
+# Phase 4 - leituras públicas de descoberta (AllowAny explícito):
+#   - public_profile_search        (GET  /api/public-profiles/search)
+#   - public_profile_suggested     (GET  /api/public-profiles/suggested)
+#   - public_profile_featured      (GET  /api/public-profiles/featured)
+#   - public_profile_check_username(GET  /api/public-profiles/check-username)
+#   - public_profile_by_username   (GET  /api/public-profiles/username/<username>)
+#   - public_profile_detail        (GET  /api/public-profiles/<id>)
+#   - public_profile_catalogs      (GET  /api/public-profiles/<id>/catalogs)
+#   - public_catalogs_featured     (GET  /api/public-catalogs/featured)
+#   - public_catalog_view          (POST /api/public-catalogs/<id>/view) [view anônima]
+# Tudo o mais exige token válido. Os viewsets de organização/sede aplicam
+# também as classes de permissions.py (IsOrganizationAdmin / CanCreateSede).
 
 
 # ============================================
@@ -39,7 +72,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 class SedeSharingViewSet(viewsets.ModelViewSet):
     queryset = SedeSharing.objects.all()
     serializer_class = SedeSharingSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, CanCreateSede]
     filterset_fields = ['source_sede', 'target_sede', 'resource_type']
 
     def perform_create(self, serializer):
@@ -54,7 +87,12 @@ class UserViewSet(viewsets.ModelViewSet):
 class OrganizationViewSet(viewsets.ModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        # Leitura para qualquer autenticado; escrita só para admin da organização.
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsOrganizationAdmin()]
 
     def get_queryset(self):
         # Users can only see organizations they belong to
@@ -70,9 +108,6 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         
         # Set owner to current user
         org = serializer.save(owner=user)
@@ -82,20 +117,22 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 class SedeViewSet(viewsets.ModelViewSet):
     queryset = Sede.objects.all()
     serializer_class = SedeSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, CanCreateSede]
     filterset_fields = ['organization']
 
 class MediaFolderViewSet(viewsets.ModelViewSet):
     queryset = MediaFolder.objects.all()
     serializer_class = MediaFolderSerializer
-    permission_classes = [permissions.AllowAny]
     filterset_fields = ['created_by', 'parent', 'organization', 'sede']
 
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
 
-        # Security: Always restrict to user's scope first (unless superuser)
+        # FRG-08: evita AttributeError com AnonymousUser (defensivo; o default
+        # global ja exige autenticacao). Restringe ao escopo do usuario.
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             # Users can only see folders from their organizations or created by them
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
@@ -112,9 +149,6 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         
         # Validate Organization
         org_id = self.request.data.get('organization')
@@ -130,7 +164,6 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [permissions.AllowAny]
     filterset_fields = ['parent', 'organization', 'sede']
 
     def get_queryset(self):
@@ -146,9 +179,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(created_by=user)
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -160,6 +190,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Security: Always restrict to user's scope first (unless superuser)
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
 
@@ -183,9 +215,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
 
         # Validate Organization
         org_id = self.request.data.get('organization')
@@ -209,8 +238,6 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            user = User.objects.filter(is_superuser=True).first()
 
         product = serializer.save()
 
@@ -247,10 +274,179 @@ class ProductViewSet(viewsets.ModelViewSet):
             saved = True
         return Response({'saved': saved, 'count': product.saves.count()})
 
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def bulk_import(self, request):
+        """
+        4.4: Importação em lote de produtos.
+        Body: {"products": [...], "sede"?: id, "organization"?: id}
+        Cada produto pode trazer seu próprio sede/organization; caso ausente,
+        usa o sede/organization do nível superior do payload.
+        Retorna {"success": N, "failed": M, "errors": [...], "created_ids": [...]}.
+        """
+        from django.db import transaction
+        from decimal import Decimal, InvalidOperation
+
+        user = request.user
+        products_payload = request.data.get('products', [])
+        if not isinstance(products_payload, list):
+            return Response(
+                {'error': 'O campo "products" deve ser uma lista.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Defaults de sede/organization no nível superior do request.
+        default_sede = request.data.get('sede')
+        default_org = request.data.get('organization')
+
+        MAX_PRODUCTS = 500
+        if len(products_payload) > MAX_PRODUCTS:
+            return Response(
+                {'error': f'Limite de {MAX_PRODUCTS} produtos por importação excedido.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Caches para validação de org/sede e categorias.
+        org_cache = {}
+        sede_cache = {}
+        category_cache = {}
+
+        def get_org(org_id):
+            if org_id in org_cache:
+                return org_cache[org_id]
+            try:
+                org = Organization.objects.get(id=org_id)
+            except Organization.DoesNotExist:
+                org = None
+            org_cache[org_id] = org
+            return org
+
+        def get_sede(sede_id):
+            if sede_id in sede_cache:
+                return sede_cache[sede_id]
+            try:
+                sede = Sede.objects.get(id=sede_id)
+            except Sede.DoesNotExist:
+                sede = None
+            sede_cache[sede_id] = sede
+            return sede
+
+        def get_or_create_category(name, org, sede):
+            if not name:
+                return None
+            key = (str(name).strip().lower(), org.id if org else None)
+            if key in category_cache:
+                return category_cache[key]
+            category = Category.objects.filter(
+                name__iexact=str(name).strip(),
+                organization=org,
+            ).first()
+            if not category:
+                category = Category.objects.create(
+                    name=str(name).strip(),
+                    organization=org,
+                    sede=sede,
+                    created_by=user,
+                )
+            category_cache[key] = category
+            return category
+
+        success = 0
+        failed = 0
+        errors = []
+        created_ids = []
+
+        for index, raw in enumerate(products_payload):
+            line = index + 1
+            row = dict(raw) if isinstance(raw, dict) else {}
+
+            # Preenche org/sede com os defaults do request, se ausentes.
+            if not row.get('organization'):
+                row['organization'] = default_org
+            if not row.get('sede'):
+                row['sede'] = default_sede
+
+            serializer = BulkProductSerializer(data=row)
+            if not serializer.is_valid():
+                failed += 1
+                msgs = []
+                for field, field_errors in serializer.errors.items():
+                    for err in field_errors:
+                        msgs.append(f'{field}: {err}')
+                errors.append(f'Linha {line}: {"; ".join(msgs)}')
+                continue
+
+            data = serializer.validated_data
+
+            # Validação de organização e acesso.
+            org = get_org(data['organization'])
+            if org is None:
+                failed += 1
+                errors.append(f'Linha {line}: organização {data["organization"]} não encontrada')
+                continue
+            if not user.is_superuser and not user.organizations.filter(id=org.id).exists():
+                failed += 1
+                errors.append(f'Linha {line}: sem permissão na organização {org.id}')
+                continue
+
+            # Validação de sede (deve pertencer à organização).
+            sede = get_sede(data['sede'])
+            if sede is None:
+                failed += 1
+                errors.append(f'Linha {line}: sede {data["sede"]} não encontrada')
+                continue
+            if sede.organization_id != org.id:
+                failed += 1
+                errors.append(f'Linha {line}: sede {sede.id} não pertence à organização {org.id}')
+                continue
+
+            name = (data.get('name') or '').strip()
+            if not name:
+                failed += 1
+                errors.append(f'Linha {line}: nome do produto é obrigatório')
+                continue
+
+            sku = (data.get('sku') or '').strip()
+            if Product.objects.filter(sku=sku).exists():
+                failed += 1
+                errors.append(f"Linha {line}: SKU '{sku}' já existe no sistema")
+                continue
+
+            category = get_or_create_category(data.get('category'), org, sede)
+
+            price = data.get('price')
+            if price is None:
+                price = Decimal('0')
+
+            try:
+                with transaction.atomic():
+                    product = Product.objects.create(
+                        name=name,
+                        description=data.get('description') or '',
+                        price=price,
+                        sku=sku,
+                        stock=data.get('stock') or 0,
+                        currency=data.get('currency') or 'BRL',
+                        category=category,
+                        organization=org,
+                        sede=sede,
+                        created_by=user,
+                    )
+                created_ids.append(product.id)
+                success += 1
+            except Exception as e:
+                failed += 1
+                errors.append(f'Linha {line}: {str(e)}')
+
+        return Response({
+            'success': success,
+            'failed': failed,
+            'errors': errors,
+            'created_ids': created_ids,
+        })
+
 class MediaViewSet(viewsets.ModelViewSet):
     queryset = Media.objects.all()
     serializer_class = MediaSerializer
-    permission_classes = [permissions.AllowAny]
     filterset_fields = ['uploaded_by', 'file', 'organization', 'sede']
 
     def get_queryset(self):
@@ -258,6 +454,8 @@ class MediaViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Security: Always restrict to user's scope first (unless superuser)
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             # Users can only see media from their organizations or uploaded by them
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(uploaded_by=user))
@@ -286,9 +484,6 @@ class MediaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         
         # Validate Organization
         org_id = self.request.data.get('organization')
@@ -365,10 +560,17 @@ class MediaViewSet(viewsets.ModelViewSet):
         videos_count = media_qs.filter(media_type='video').count()
         documents_count = media_qs.filter(media_type='document').count()
         
-        # Calculate size (this is heavier, might want to optimize or cache)
-        total_size = media_qs.aggregate(Sum('size'))['size__sum'] or 0
-        
-        # Format size
+        # COR-02: o model Media nao tem campo `size`; somamos o tamanho dos
+        # arquivos em si (o aggregate Sum('size') anterior quebrava em runtime).
+        total_size = 0
+        for media in media_qs:
+            try:
+                if media.file:
+                    total_size += media.file.size
+            except Exception:
+                # Arquivo pode estar ausente no storage; ignora.
+                pass
+
         def format_size(size):
             for unit in ['B', 'KB', 'MB', 'GB']:
                 if size < 1024:
@@ -376,7 +578,8 @@ class MediaViewSet(viewsets.ModelViewSet):
                 size /= 1024
             return f"{size:.1f} TB"
 
-        favorites_count = media_qs.filter(is_favorite=True).count()
+        # Media nao tem campo is_favorite; nao ha favoritos a contar.
+        favorites_count = 0
 
         return Response({
             'total_files': total_files,
@@ -388,41 +591,6 @@ class MediaViewSet(viewsets.ModelViewSet):
             'total_size_formatted': format_size(total_size),
             'favorites_count': favorites_count
         })
-        folders_count = folder_qs.count()
-
-        # Calculate total size in python since we don't have a size field in DB
-        total_size = 0
-        for media in media_qs:
-            try:
-                if media.file:
-                    total_size += media.file.size
-            except Exception:
-                # File might be missing or other error
-                pass
-
-        # Determine size formatted
-        if total_size < 1024 * 1024:
-            total_size_formatted = f"{total_size / 1024:.2f} KB"
-        else:
-            total_size_formatted = f"{total_size / (1024 * 1024):.2f} MB"
-            
-        images_count = media_qs.filter(media_type='image').count()
-        videos_count = media_qs.filter(media_type='video').count()
-        documents_count = media_qs.filter(media_type='document').count()
-
-        favorites_count = 0
-
-        data = {
-            'total_files': total_files,
-            'folders_count': folders_count,
-            'total_size': total_size,
-            'total_size_formatted': total_size_formatted,
-            'images_count': images_count,
-            'videos_count': videos_count,
-            'documents_count': documents_count,
-            'favorites_count': favorites_count
-        }
-        return Response(data)
 
 class ThemeViewSet(viewsets.ModelViewSet):
     queryset = Theme.objects.all()
@@ -441,9 +609,6 @@ class ThemeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(created_by=user)
 
 class CatalogViewSet(viewsets.ModelViewSet):
@@ -460,6 +625,8 @@ class CatalogViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Security: Always restrict to user's scope first (unless superuser)
+        if not user.is_authenticated:
+            return queryset.none()
         if not user.is_superuser:
             # Users can only see catalogs from their organizations or personal ones
             queryset = queryset.filter(Q(organization__in=user.organizations.all()) | Q(created_by=user))
@@ -483,9 +650,6 @@ class CatalogViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
 
         catalog = serializer.save(created_by=user)
 
@@ -501,8 +665,6 @@ class CatalogViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            user = User.objects.filter(is_superuser=True).first()
 
         catalog = serializer.save()
 
@@ -555,6 +717,101 @@ class CatalogViewSet(viewsets.ModelViewSet):
             saved = True
         return Response({'saved': saved, 'count': catalog.saves.count()})
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def save_content(self, request, pk=None):
+        """
+        INC-01: salva o conteúdo do editor (páginas/elementos) de forma
+        transacional e idempotente. Recria Page/Component/PageComponent a partir
+        do payload, sem deixar registros órfãos.
+
+        Payload esperado:
+        {
+          "pages": [
+            {
+              "order": 0,
+              "background_image": <media_id|null>,
+              "elements": [
+                { "type": "text-title", "position": {"x":..,"y":..},
+                  "size": {"width":..,"height":..}, "zIndex": 0, ...resto do JSON }
+              ]
+            }
+          ]
+        }
+        """
+        from django.db import transaction
+
+        catalog = self.get_object()
+        pages_payload = request.data.get('pages', [])
+        if not isinstance(pages_payload, list):
+            return Response(
+                {'error': 'O campo "pages" deve ser uma lista.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        def to_component_type(element_type):
+            t = (element_type or '').lower()
+            if t.startswith('text') or t in ('divider', 'footer'):
+                return 'text'
+            if t.startswith('product'):
+                return 'product'
+            return 'image'
+
+        def as_int(value, default=0):
+            try:
+                return int(round(float(value)))
+            except (TypeError, ValueError):
+                return default
+
+        with transaction.atomic():
+            # Limpa o conteúdo atual do catálogo (componentes não reutilizáveis
+            # ficam órfãos se não removidos explicitamente).
+            existing_pages = Page.objects.filter(catalog=catalog)
+            existing_pc = PageComponent.objects.filter(page__in=existing_pages)
+            component_ids = list(existing_pc.values_list('component_id', flat=True))
+            existing_pc.delete()
+            Component.objects.filter(id__in=component_ids, is_reusable=False).delete()
+            existing_pages.delete()
+
+            created_pages = 0
+            created_elements = 0
+            for page_index, page_data in enumerate(pages_payload):
+                page = Page.objects.create(
+                    catalog=catalog,
+                    order=as_int(page_data.get('order'), page_index),
+                    background_image_id=page_data.get('background_image'),
+                )
+                created_pages += 1
+
+                for elem_index, element in enumerate(page_data.get('elements', [])):
+                    position = element.get('position', {}) or {}
+                    size = element.get('size', {}) or {}
+                    component = Component.objects.create(
+                        name=element.get('name') or element.get('type') or 'elemento',
+                        component_type=to_component_type(element.get('type')),
+                        content=element,
+                        is_reusable=False,
+                        organization=catalog.organization,
+                        sede=catalog.sede,
+                        created_by=request.user,
+                    )
+                    PageComponent.objects.create(
+                        page=page,
+                        component=component,
+                        position_x=as_int(position.get('x')),
+                        position_y=as_int(position.get('y')),
+                        width=as_int(size.get('width')),
+                        height=as_int(size.get('height')),
+                        layer=as_int(element.get('zIndex'), elem_index),
+                    )
+                    created_elements += 1
+
+        return Response({
+            'status': 'ok',
+            'catalog': catalog.id,
+            'pages': created_pages,
+            'elements': created_elements,
+        })
+
 class PageViewSet(viewsets.ModelViewSet):
     queryset = Page.objects.all()
     serializer_class = PageSerializer
@@ -576,9 +833,6 @@ class ComponentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(created_by=user)
 
 class PageComponentViewSet(viewsets.ModelViewSet):
@@ -591,9 +845,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(user=user)
 
 class ActivityViewSet(viewsets.ModelViewSet):
@@ -613,9 +864,6 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if not user.is_authenticated:
-            # Fallback for dev: assign first superuser
-            user = User.objects.filter(is_superuser=True).first()
         serializer.save(user=user)
 # Profile Views
 @api_view(['GET', 'PATCH'])
@@ -782,12 +1030,30 @@ def register_user(request):
         if User.objects.filter(email=email).exists():
             return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            role=role 
-        )
+        from django.db import transaction
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                role=role
+            )
+
+            # FRG-05: provisiona organização + sede padrão para o novo usuário,
+            # senão ele não consegue criar produtos/catálogos (perform_create exige org).
+            organization = Organization.objects.create(
+                name=f'{username} Org',
+                owner=user,
+            )
+            default_sede = Sede.objects.create(
+                name='Sede Principal',
+                organization=organization,
+                responsible_user=user,
+            )
+            organization.default_sede = default_sede
+            organization.save(update_fields=['default_sede'])
+            user.organizations.add(organization)
+            user.sedes.add(default_sede)
 
         # Generate tokens immediately for auto-login
         from rest_framework_simplejwt.tokens import RefreshToken
@@ -797,6 +1063,8 @@ def register_user(request):
             'user': UserSerializer(user).data,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'organization': OrganizationSerializer(organization).data,
+            'default_sede': SedeSerializer(default_sede).data,
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -1006,3 +1274,667 @@ def global_search(request):
         'products': products_data,
         'total': total
     })
+
+
+# ============================================
+# Phase 4 - Notificações
+# ============================================
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Notificações do usuário autenticado.
+    - GET    /api/notifications/                 lista (mais recentes primeiro)
+    - GET    /api/notifications/{id}/            detalhe
+    - GET    /api/notifications/unread_count/    {"count": N}
+    - POST   /api/notifications/{id}/mark_read/  marca uma como lida
+    - POST   /api/notifications/mark_all_read/   marca todas como lidas
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Notification.objects.none()
+        return Notification.objects.filter(recipient=user).order_by('-created_at')
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = Notification.objects.filter(
+            recipient=request.user, read_at__isnull=True
+        ).count()
+        return Response({'count': count})
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        from django.utils import timezone
+        notification = self.get_object()
+        if notification.read_at is None:
+            notification.read_at = timezone.now()
+            notification.save(update_fields=['read_at'])
+        serializer = self.get_serializer(notification)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        from django.utils import timezone
+        count = Notification.objects.filter(
+            recipient=request.user, read_at__isnull=True
+        ).update(read_at=timezone.now())
+        return Response({'count': count})
+
+
+# ============================================
+# Phase 4 - Mensagens / Conversas
+# ============================================
+
+class ConversationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Conversas das quais o usuário autenticado participa.
+    - GET  /api/conversations/                  lista (atualizadas mais recentes primeiro)
+    - GET  /api/conversations/{id}/             detalhe (com mensagens)
+    - POST /api/conversations/start/            inicia/recupera conversa por contexto
+    - POST /api/conversations/{id}/message/     envia mensagem
+    - POST /api/conversations/{id}/mark_read/   marca mensagens como lidas
+    - GET  /api/conversations/unread_count/     {"count": N}
+    """
+    serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Conversation.objects.none()
+        return Conversation.objects.filter(participants=user).order_by('-updated_at').distinct()
+
+    @action(detail=False, methods=['post'])
+    def start(self, request):
+        origin_type = request.data.get('origin_type')
+        origin_id = request.data.get('origin_id')
+
+        if not origin_type or origin_id is None:
+            return Response(
+                {'error': 'origin_type e origin_id são obrigatórios.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Conversation exige organization (FK não-nula).
+        organization = request.user.organizations.first()
+        if organization is None:
+            return Response(
+                {'error': 'Usuário não pertence a nenhuma organização.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Procura uma conversa existente para (origin_type, origin_id) onde o
+        # usuário ja participa; senão cria uma nova.
+        conversation = Conversation.objects.filter(
+            origin_type=origin_type,
+            origin_id=origin_id,
+            participants=request.user,
+        ).first()
+
+        if conversation is None:
+            conversation = Conversation.objects.create(
+                organization=organization,
+                origin_type=origin_type,
+                origin_id=origin_id,
+            )
+            conversation.participants.add(request.user)
+
+        serializer = self.get_serializer(conversation)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def message(self, request, pk=None):
+        conversation = self.get_object()
+        content = request.data.get('content')
+        if not content:
+            return Response(
+                {'error': 'O campo "content" é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        msg = Message.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=content,
+        )
+
+        # Garante que o remetente é participante e atualiza updated_at.
+        if not conversation.participants.filter(id=request.user.id).exists():
+            conversation.participants.add(request.user)
+        conversation.save(update_fields=['updated_at'])
+
+        serializer = MessageSerializer(msg, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        from django.utils import timezone
+        conversation = self.get_object()
+        conversation.messages.exclude(sender=request.user).filter(
+            read_at__isnull=True
+        ).update(read_at=timezone.now())
+        return Response({'status': 'ok'})
+
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = Message.objects.filter(
+            conversation__participants=request.user,
+            read_at__isnull=True,
+        ).exclude(sender=request.user).distinct().count()
+        return Response({'count': count})
+
+
+# ============================================
+# Phase 4 - Perfis Públicos / Social
+# ============================================
+
+def _profile_page_params(request):
+    """Le page/pageSize aceitando camelCase enviado pelo front."""
+    try:
+        page = int(request.query_params.get('page', 1))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        page_size = int(
+            request.query_params.get('pageSize')
+            or request.query_params.get('page_size')
+            or 20
+        )
+    except (TypeError, ValueError):
+        page_size = 20
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 20
+    return page, page_size
+
+
+def _paginate(queryset, page, page_size):
+    total = queryset.count()
+    start = (page - 1) * page_size
+    end = start + page_size
+    return list(queryset[start:end]), total
+
+
+def _camel_to_profile_data(data):
+    """Normaliza payload camelCase do front para os campos do modelo."""
+    mapping = {
+        'displayName': 'display_name',
+        'profileType': 'profile_type',
+    }
+    out = {}
+    for key, value in data.items():
+        if key == 'settings':
+            continue
+        out[mapping.get(key, key)] = value
+    return out
+
+
+@api_view(['GET', 'POST', 'PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me(request):
+    """
+    GET   -> perfil público do usuário logado (404 se não existe)
+    POST  -> cria o perfil a partir de {displayName, bio, profileType, segments}
+    PATCH -> atualiza o perfil (UpdateProfileRequest)
+    """
+    user = request.user
+
+    if request.method == 'GET':
+        try:
+            profile = user.public_profile
+        except PublicProfile.DoesNotExist:
+            return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = PublicProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+        if PublicProfile.objects.filter(user=user).exists():
+            return Response(
+                {'detail': 'Perfil já existe'}, status=status.HTTP_400_BAD_REQUEST
+            )
+        data = _camel_to_profile_data(request.data)
+        # Gera username a partir do display_name caso não informado.
+        if not data.get('username'):
+            from django.utils.text import slugify
+            base = slugify(data.get('display_name') or user.username) or f'user{user.id}'
+            username = base
+            i = 1
+            while PublicProfile.objects.filter(username=username).exists():
+                username = f'{base}-{i}'
+                i += 1
+            data['username'] = username
+        serializer = PublicProfileCreateSerializer(data=data)
+        if serializer.is_valid():
+            profile = serializer.save(user=user)
+            out = PublicProfileSerializer(profile, context={'request': request})
+            return Response(out.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # PATCH
+    try:
+        profile = user.public_profile
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    data = _camel_to_profile_data(request.data)
+    serializer = PublicProfileUpdateSerializer(profile, data=data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        # Atualiza settings embutidos, se enviados.
+        settings_payload = request.data.get('settings')
+        if settings_payload:
+            settings_serializer = PublicProfileSettingsSerializer(
+                profile, data=settings_payload, partial=True
+            )
+            if settings_serializer.is_valid():
+                settings_serializer.save()
+        out = PublicProfileSerializer(profile, context={'request': request})
+        return Response(out.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_avatar(request):
+    try:
+        profile = request.user.public_profile
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    if 'avatar' not in request.FILES:
+        return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+    profile.avatar = request.FILES['avatar']
+    profile.save(update_fields=['avatar'])
+    url = request.build_absolute_uri(profile.avatar.url) if profile.avatar else None
+    return Response({'avatarUrl': url})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_cover(request):
+    try:
+        profile = request.user.public_profile
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    if 'cover' not in request.FILES:
+        return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+    profile.cover_image = request.FILES['cover']
+    profile.save(update_fields=['cover_image'])
+    url = request.build_absolute_uri(profile.cover_image.url) if profile.cover_image else None
+    return Response({'coverImageUrl': url})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_stats(request):
+    try:
+        profile = request.user.public_profile
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    from django.utils import timezone
+    from datetime import timedelta
+
+    catalogs = Catalog.objects.filter(created_by=request.user)
+    catalog_views = CatalogView.objects.filter(catalog__in=catalogs).count()
+    catalog_likes = CatalogLike.objects.filter(catalog__in=catalogs).count()
+    week_ago = timezone.now() - timedelta(days=7)
+    new_followers = ProfileFollow.objects.filter(
+        followed_profile=profile, created_at__gte=week_ago
+    ).count()
+
+    top_catalog = None
+    top = catalogs.annotate(v=Count('catalog_views')).order_by('-v').first()
+    if top:
+        top_catalog = {
+            'id': top.id,
+            'title': top.title,
+            'views': top.catalog_views.count(),
+        }
+
+    return Response({
+        'catalogViews': catalog_views,
+        'catalogLikes': catalog_likes,
+        'profileViews': catalog_views,
+        'newFollowersThisWeek': new_followers,
+        'topCatalog': top_catalog,
+        # Contagens auxiliares (followers/following/catalogs)
+        'followers': profile.followers_count,
+        'following': profile.following_count,
+        'catalogs': profile.catalog_count,
+        'views': catalog_views,
+    })
+
+
+def _profiles_response(profiles_qs, request, page, page_size):
+    items, total = _paginate(profiles_qs, page, page_size)
+    serializer = PublicProfileSerializer(items, many=True, context={'request': request})
+    return Response({
+        'profiles': serializer.data,
+        'total': total,
+        'page': page,
+        'pageSize': page_size,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_following(request):
+    page, page_size = _profile_page_params(request)
+    profile_ids = ProfileFollow.objects.filter(
+        follower=request.user
+    ).values_list('followed_profile_id', flat=True)
+    qs = PublicProfile.objects.filter(id__in=profile_ids).order_by('-created_at')
+    return _profiles_response(qs, request, page, page_size)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_followers(request):
+    page, page_size = _profile_page_params(request)
+    try:
+        profile = request.user.public_profile
+    except PublicProfile.DoesNotExist:
+        return Response({'profiles': [], 'total': 0, 'page': page, 'pageSize': page_size})
+    follower_ids = ProfileFollow.objects.filter(
+        followed_profile=profile
+    ).values_list('follower_id', flat=True)
+    qs = PublicProfile.objects.filter(user_id__in=follower_ids).order_by('-created_at')
+    return _profiles_response(qs, request, page, page_size)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_saved(request):
+    page, page_size = _profile_page_params(request)
+    profile_ids = ProfileSave.objects.filter(
+        user=request.user
+    ).values_list('profile_id', flat=True)
+    qs = PublicProfile.objects.filter(id__in=profile_ids).order_by('-created_at')
+    return _profiles_response(qs, request, page, page_size)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_blocked(request):
+    blocked_ids = list(BlockedUser.objects.filter(
+        blocker=request.user
+    ).values_list('blocked_id', flat=True))
+    return Response(blocked_ids)
+
+
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_me_settings(request):
+    try:
+        profile = request.user.public_profile
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    serializer = PublicProfileSettingsSerializer(profile, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_search(request):
+    page, page_size = _profile_page_params(request)
+    qs = PublicProfile.objects.filter(show_in_search=True, visibility='publico')
+
+    query = request.query_params.get('query') or request.query_params.get('q')
+    if query:
+        qs = qs.filter(
+            Q(display_name__icontains=query) |
+            Q(username__icontains=query) |
+            Q(bio__icontains=query)
+        )
+
+    profile_type = request.query_params.get('profileType') or request.query_params.get('profile_type')
+    if profile_type:
+        qs = qs.filter(profile_type=profile_type)
+
+    city = request.query_params.get('city')
+    if city:
+        qs = qs.filter(city__icontains=city)
+
+    state = request.query_params.get('state')
+    if state:
+        qs = qs.filter(state__icontains=state)
+
+    # segments pode vir repetido (segments=a&segments=b) ou como lista.
+    segments = request.query_params.getlist('segments')
+    if segments:
+        seg_q = Q()
+        for seg in segments:
+            seg_q |= Q(segments__icontains=seg)
+        qs = qs.filter(seg_q)
+
+    qs = qs.order_by('-created_at')
+    return _profiles_response(qs, request, page, page_size)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_suggested(request):
+    try:
+        limit = int(request.query_params.get('limit', 10))
+    except (TypeError, ValueError):
+        limit = 10
+    qs = PublicProfile.objects.filter(
+        show_in_search=True, visibility='publico'
+    ).order_by('-created_at')[:limit]
+    serializer = PublicProfileSerializer(qs, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_featured(request):
+    try:
+        limit = int(request.query_params.get('limit', 10))
+    except (TypeError, ValueError):
+        limit = 10
+    qs = PublicProfile.objects.filter(
+        show_in_search=True, visibility='publico'
+    ).annotate(n_followers=Count('followers')).order_by('-n_followers', '-created_at')[:limit]
+    serializer = PublicProfileSerializer(qs, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_check_username(request):
+    username = request.query_params.get('username', '')
+    available = bool(username) and not PublicProfile.objects.filter(username=username).exists()
+    return Response({'available': available})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_by_username(request, username):
+    try:
+        profile = PublicProfile.objects.get(username=username)
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    serializer = PublicProfileSerializer(profile, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_detail(request, pk):
+    try:
+        profile = PublicProfile.objects.get(pk=pk)
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    serializer = PublicProfileSerializer(profile, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_profile_catalogs(request, pk):
+    page, page_size = _profile_page_params(request)
+    try:
+        profile = PublicProfile.objects.get(pk=pk)
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    qs = Catalog.objects.filter(created_by=profile.user, is_public=True)
+
+    sort_by = request.query_params.get('sortBy') or request.query_params.get('sort_by')
+    if sort_by == 'popular':
+        qs = qs.annotate(n_likes=Count('catalog_likes')).order_by('-n_likes', '-created_at')
+    elif sort_by == 'views':
+        qs = qs.annotate(n_views=Count('catalog_views')).order_by('-n_views', '-created_at')
+    else:
+        qs = qs.order_by('-created_at')
+
+    items, total = _paginate(qs, page, page_size)
+    serializer = PublicCatalogSerializer(items, many=True, context={'request': request})
+    return Response({
+        'catalogs': serializer.data,
+        'total': total,
+        'page': page,
+        'pageSize': page_size,
+    })
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_follow(request, pk):
+    try:
+        profile = PublicProfile.objects.get(pk=pk)
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        ProfileFollow.objects.get_or_create(
+            follower=request.user, followed_profile=profile
+        )
+        return Response({'success': True})
+
+    ProfileFollow.objects.filter(
+        follower=request.user, followed_profile=profile
+    ).delete()
+    return Response({'success': True})
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_save(request, pk):
+    try:
+        profile = PublicProfile.objects.get(pk=pk)
+    except PublicProfile.DoesNotExist:
+        return Response({'detail': 'Perfil não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        ProfileSave.objects.get_or_create(user=request.user, profile=profile)
+        return Response({'success': True})
+
+    ProfileSave.objects.filter(user=request.user, profile=profile).delete()
+    return Response({'success': True})
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def public_profile_block(request, user_id):
+    try:
+        target = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({'detail': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        BlockedUser.objects.get_or_create(blocker=request.user, blocked=target)
+        return Response({'success': True})
+
+    BlockedUser.objects.filter(blocker=request.user, blocked=target).delete()
+    return Response({'success': True})
+
+
+# ============================================
+# Phase 4 - Catálogos Públicos (social)
+# ============================================
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_catalogs_featured(request):
+    page, page_size = _profile_page_params(request)
+    qs = Catalog.objects.filter(is_public=True)
+
+    segment = request.query_params.get('segment')
+    if segment:
+        qs = qs.filter(
+            created_by__public_profile__segments__icontains=segment
+        )
+
+    qs = qs.annotate(n_likes=Count('catalog_likes')).order_by('-n_likes', '-created_at')
+    items, total = _paginate(qs, page, page_size)
+    serializer = PublicCatalogSerializer(items, many=True, context={'request': request})
+    return Response({
+        'catalogs': serializer.data,
+        'total': total,
+        'page': page,
+        'pageSize': page_size,
+    })
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def public_catalog_like(request, pk):
+    try:
+        catalog = Catalog.objects.get(pk=pk)
+    except Catalog.DoesNotExist:
+        return Response({'detail': 'Catálogo não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'POST':
+        CatalogLike.objects.get_or_create(user=request.user, catalog=catalog)
+    else:
+        CatalogLike.objects.filter(user=request.user, catalog=catalog).delete()
+
+    return Response({
+        'success': True,
+        'likeCount': CatalogLike.objects.filter(catalog=catalog).count(),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def public_catalog_view(request, pk):
+    try:
+        catalog = Catalog.objects.get(pk=pk)
+    except Catalog.DoesNotExist:
+        return Response({'detail': 'Catálogo não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    ip = request.META.get('REMOTE_ADDR')
+    ua = request.META.get('HTTP_USER_AGENT', '')
+    user = request.user if request.user.is_authenticated else None
+    CatalogView.objects.create(
+        catalog=catalog, user=user, ip_address=ip, user_agent=ua
+    )
+    return Response({'success': True})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def public_catalog_share(request, pk):
+    try:
+        catalog = Catalog.objects.get(pk=pk)
+    except Catalog.DoesNotExist:
+        return Response({'detail': 'Catálogo não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    platform = request.data.get('platform')
+    Activity.objects.create(
+        user=request.user,
+        action='Catálogo compartilhado',
+        description=f'Compartilhou o catálogo "{catalog.title}"' + (f' via {platform}' if platform else ''),
+        catalog=catalog,
+        organization=catalog.organization,
+        sede=catalog.sede,
+    )
+    return Response({'success': True})

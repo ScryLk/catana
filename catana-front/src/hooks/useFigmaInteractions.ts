@@ -4,7 +4,7 @@
  * ETAPA 11: Atalhos de teclado
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
 
 export const useFigmaInteractions = () => {

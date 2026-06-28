@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import type { FC } from 'react';
 
 import { Upload, X, CheckCircle2, Loader2, Download, AlertCircle } from 'lucide-react';
-import * as XLSX from 'xlsx';
+// FRG-07: fork mantido do SheetJS (xlsx oficial tem prototype pollution + ReDoS sem fix).
+import * as XLSX from '@e965/xlsx';
 import { productService } from '@/services/productService';
 
 interface ImportProductsModalProps {
@@ -32,8 +33,6 @@ interface ValidationSummary {
 }
 
 const REQUIRED_FIELDS = ['name', 'sku'];
-const OPTIONAL_FIELDS = ['price', 'description', 'category', 'stock', 'currency', 'image_main', 'image_gallery'];
-const ALL_FIELDS = [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS];
 
 export const ImportProductsModal: FC<ImportProductsModalProps> = ({
   isOpen,
@@ -41,10 +40,10 @@ export const ImportProductsModal: FC<ImportProductsModalProps> = ({
   onSuccess,
 }) => {
   const [step, setStep] = useState<ImportStep>('upload');
-  const [file, setFile] = useState<File | null>(null);
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [csvData, setCsvData] = useState<any[]>([]);
-  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({});
+  const [, setFile] = useState<File | null>(null);
+  const [, setCsvHeaders] = useState<string[]>([]);
+  const [, setCsvData] = useState<any[]>([]);
+  const [, setColumnMapping] = useState<ColumnMapping>({});
   const [validatedProducts, setValidatedProducts] = useState<ProductRow[]>([]);
   const [validationSummary, setValidationSummary] = useState<ValidationSummary | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -113,7 +112,7 @@ export const ImportProductsModal: FC<ImportProductsModalProps> = ({
 
       // Auto-detect mapping
       const autoMapping: ColumnMapping = {};
-      headers.forEach((header, index) => {
+      headers.forEach((header) => {
         const normalized = header.toLowerCase().replace(/[_\s]/g, '');
 
         if (normalized.includes('nome') || normalized === 'name' || normalized === 'produto') {

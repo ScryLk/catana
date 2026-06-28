@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { genId } from '../utils/id';
 import type { CatalogElement } from '../types/editor';
 
 export interface CustomComponent {
@@ -25,7 +26,7 @@ export const useComponentStore = create<ComponentStore>((set, get) => ({
   addComponent: (component) => {
     const newComponent: CustomComponent = {
       ...component,
-      id: `component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: genId('component'),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };

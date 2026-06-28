@@ -1,12 +1,25 @@
 import api from './api';
 import type { ProductData } from '../types/editor';
 
+// Informações de dropshipping (JSONField flexível no backend)
+export interface DropshippingInfo {
+  weight?: string;
+  width?: string;
+  height?: string;
+  depth?: string;
+  supplier?: string;
+  supplierSku?: string;
+  leadTime?: string;
+  shippingCost?: string;
+}
+
 // Extended Product interface for the service
 export interface Product extends Omit<ProductData, 'image'> {
   id: number;
   image: number | null;
   image_url: string | null;
   stock: number;
+  dropshipping_info?: DropshippingInfo;
   created_at: string;
   updated_at: string;
 }
@@ -207,57 +220,20 @@ class ProductService {
   }
 
   /**
-   * Import products from JSON (Product JSON Specification v1.0)
-   * @param jsonData Product JSON data
-   * @returns Import result with counts and errors
+   * Bulk import products via dedicated endpoint.
+   * @param products List of product payloads (already cleaned of UI-only fields)
+   * @param options Extra context (sede/organization)
+   * @returns Import summary
    */
-  async importProducts(jsonData: any): Promise<{
-    success: boolean;
-    imported: number;
-    created: number;
-    updated: number;
-    errors: Array<{ index?: number; product?: string; field?: string; message: string }>;
-    warnings: string[];
-    products: Array<{ id: number; name: string; sku: string | null; action: 'created' | 'updated' }>;
-  }> {
-    const response = await api.post('/api/products/import_products/', jsonData);
+  async bulkImport(
+    products: Record<string, unknown>[],
+    options?: { sede?: number; organization?: number }
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
+    const response = await api.post<{ success: number; failed: number; errors: string[] }>(
+      '/api/products/bulk_import/',
+      { products, ...options }
+    );
     return response.data;
-  }
-
-  /**
-   * Import products from file
-   * @param file JSON file to import
-   * @returns Import result
-   */
-  async importProductsFromFile(file: File): Promise<{
-    success: boolean;
-    imported: number;
-    created: number;
-    updated: number;
-    errors: Array<{ index?: number; product?: string; field?: string; message: string }>;
-    warnings: string[];
-    products: Array<{ id: number; name: string; sku: string | null; action: 'created' | 'updated' }>;
-  }> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = async (e) => {
-        try {
-          const text = e.target?.result as string;
-          const jsonData = JSON.parse(text);
-          const result = await this.importProducts(jsonData);
-          resolve(result);
-        } catch (error) {
-          reject(new Error('Arquivo JSON inválido'));
-        }
-      };
-
-      reader.onerror = () => {
-        reject(new Error('Erro ao ler arquivo'));
-      };
-
-      reader.readAsText(file);
-    });
   }
 }
 

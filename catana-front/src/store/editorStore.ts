@@ -1,13 +1,14 @@
 import { create } from 'zustand';
-import type { EditorStore, CatalogElement, CatalogPage, HeaderFooterConfig, CatalogState } from '../types/editor';
+import type { EditorStore, CatalogElement, CatalogPage, HeaderFooterConfig } from '../types/editor';
 import type { DesignTokens } from '../types/designTokens';
 import { DEFAULT_DESIGN_TOKENS } from '../types/designTokens';
 import { exportCatalog, downloadCatalogJSON } from '../services/catalogIO.service';
+import { genId } from '../utils/id';
 
 const MAX_HISTORY = 50;
 
 const createInitialPage = (): CatalogPage => ({
-  id: `page-${Date.now()}`,
+  id: genId('page'),
   name: 'Página 1',
   order: 0,
   elements: [],
@@ -34,7 +35,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     rightSidebarTab: 'properties',
     interactionMode: 'select',
     activeTool: 'select',
-    designTokens: undefined, // Tokens podem ser definidos via import ou manualmente
+    designTokens: DEFAULT_DESIGN_TOKENS, // INC-06: tema global ativo por padrão (editável no painel de Tema)
 
     // Helper to get current page
     getCurrentPage: () => {
@@ -44,8 +45,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     // Element Actions
     addElement: (element, targetPageId?: string) => {
-      console.log('[EditorStore] addElement chamado com:', element);
-
       const state = get();
       // Se targetPageId foi fornecido, usar ele; senão usar a página atual
       const targetPage = targetPageId
@@ -56,8 +55,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         console.error('[EditorStore] Não há página de destino!', { targetPageId, currentPageId: state.currentPageId });
         return;
       }
-
-      console.log('[EditorStore] Adicionando elemento à página:', targetPage.id, targetPage.name);
 
       // Fazer uma cópia profunda do content para evitar mutações
       const contentCopy = element.content ? JSON.parse(JSON.stringify(element.content)) : undefined;
@@ -90,16 +87,13 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       const newElement: CatalogElement = {
         ...element,
         ...(contentCopy !== undefined ? { content: contentCopy } : {}),
-        id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: genId('element'),
         name: element.name || defaultName,
         pageId: targetPage.id,
         zIndex: targetPage.elements.length,
         visible: element.visible ?? true,
         locked: element.locked ?? false,
       };
-
-      console.log('[EditorStore] Novo elemento criado:', newElement);
-      console.log('[EditorStore] Content do elemento:', JSON.stringify(newElement.content));
 
       set((state) => {
         const newPages = state.pages.map((page) =>
@@ -121,13 +115,11 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     updateElement: (id, updates) => {
-      console.log('[EditorStore] updateElement chamado - id:', id, 'updates:', updates);
       set((state) => {
         const newPages = state.pages.map((page) => {
           const elements = page.elements.map((el) => {
             if (el.id === id) {
               const updated = { ...el, ...updates };
-              console.log('[EditorStore] Elemento atualizado:', updated);
               return updated;
             }
             return el;
@@ -276,7 +268,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         maxY = Math.max(maxY, el.position.y + el.size.height);
       });
 
-      const groupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const groupId = genId('group');
 
       // Create group element (invisible container)
       const groupElement: CatalogElement = {
@@ -391,7 +383,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
       const newElement: CatalogElement = {
         ...element,
-        id: `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: genId('element'),
         position: {
           x: element.position.x + 20,
           y: element.position.y + 20,
@@ -443,7 +435,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     addPage: (name) => {
       set((state) => {
         const newPage: CatalogPage = {
-          id: `page-${Date.now()}`,
+          id: genId('page'),
           name: name || `Página ${state.pages.length + 1}`,
           order: state.pages.length,
           elements: [],
@@ -452,10 +444,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         const newPages = [...state.pages, newPage];
         const newHistory = state.history.slice(0, state.historyIndex + 1);
         newHistory.push(newPages);
-
-        console.log('[EditorStore] addPage - Nova página criada:', newPage.id, 'Nome:', newPage.name);
-        console.log('[EditorStore] addPage - currentPageId atual:', state.currentPageId);
-        console.log('[EditorStore] addPage - Mudando para nova página:', newPage.id);
 
         return {
           pages: newPages,
@@ -493,26 +481,6 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     setCurrentPage: (pageId) => {
-      const state = get();
-      const targetPage = state.pages.find(p => p.id === pageId);
-      console.log('[EditorStore] setCurrentPage chamado:');
-      console.log('  - pageId:', pageId);
-      console.log('  - Página encontrada:', targetPage?.name);
-      console.log('  - Elementos na página:', targetPage?.elements.length || 0);
-
-      // Log detalhado de todos os elementos
-      if (targetPage && targetPage.elements.length > 0) {
-        targetPage.elements.forEach((el, index) => {
-          console.log(`  - Elemento ${index + 1}:`, {
-            type: el.type,
-            hasContent: !!el.content,
-            hasProducts: !!el.content?.products,
-            productsLength: el.content?.products?.length || 0,
-            contentKeys: el.content ? Object.keys(el.content) : []
-          });
-        });
-      }
-
       set({ currentPageId: pageId, selectedElementId: null });
     },
 
@@ -907,7 +875,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         rightSidebarTab: 'properties',
         interactionMode: 'select',
         activeTool: 'select',
-        designTokens: undefined,
+        designTokens: DEFAULT_DESIGN_TOKENS,
       });
     },
 
@@ -925,7 +893,55 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     resetDesignTokens: () => {
-      set({ designTokens: undefined });
+      set({ designTokens: DEFAULT_DESIGN_TOKENS });
+    },
+
+    applyThemeToElements: () => {
+      // INC-06: aplica o tema "de um clique" trocando cores/fontes literais por
+      // referências $tokens.*; a partir daí, editar o tema atualiza tudo ao vivo.
+      set((state) => {
+        const mapElement = (el: CatalogElement): CatalogElement => {
+          const type = el.type as string;
+          const style = { ...el.style };
+          const textData = el.textData ? { ...el.textData } : el.textData;
+
+          if (type.startsWith('text')) {
+            style.textColor = '$tokens.colors.text.primary';
+            style.fontFamily = '$tokens.typography.body.fontFamily';
+            if (textData) {
+              textData.textColor = '$tokens.colors.text.primary';
+              textData.fontFamily = '$tokens.typography.body.fontFamily';
+            }
+          } else if (
+            type.startsWith('product') ||
+            type.startsWith('shape') ||
+            type === 'banner' ||
+            type === 'highlight-banner' ||
+            type === 'footer'
+          ) {
+            style.backgroundColor = '$tokens.colors.surface';
+            if (el.style?.borderWidth) {
+              style.borderColor = '$tokens.colors.border';
+            }
+          }
+
+          return { ...el, style, textData };
+        };
+
+        const newPages = state.pages.map((page) => ({
+          ...page,
+          elements: page.elements.map(mapElement),
+        }));
+
+        const newHistory = state.history.slice(0, state.historyIndex + 1);
+        newHistory.push(newPages);
+
+        return {
+          pages: newPages,
+          history: newHistory.slice(-MAX_HISTORY),
+          historyIndex: newHistory.length - 1,
+        };
+      });
     },
   };
 });

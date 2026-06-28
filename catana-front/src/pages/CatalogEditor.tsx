@@ -1,11 +1,8 @@
 import { type FC, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { EditorHeader } from '../components/editor/EditorHeader';
 import { FigmaHeader } from '../components/editor/FigmaHeader';
-import { PhotoshopToolbar } from '../components/editor/PhotoshopToolbar';
 import { FigmaToolbar } from '../components/editor/FigmaToolbar';
 import { CompactPageIndicator } from '../components/editor/CompactPageIndicator';
-import { InfiniteCanvas } from '../components/editor/InfiniteCanvas';
 import { FigmaCanvasV2 as FigmaCanvas } from '../components/editor/FigmaCanvasV2';
 import { PDFPreviewModal } from '../components/editor/PDFPreviewModal';
 import { ExportModal } from '../components/editor/ExportModal';
@@ -24,9 +21,14 @@ import {
   alignElements,
 } from '../utils/alignmentHelpers';
 import { loadImportedCatalog, isImportedCatalog } from '../services/catalogLoader.service';
+import { catalogService } from '../services/catalogService';
+import { DesignTokensPanel } from '../components/editor/DesignTokensPanel';
+import { toast } from 'sonner';
 
 const CatalogEditorContent: FC = () => {
   const location = useLocation();
+  const [currentCatalogId, setCurrentCatalogId] = useState<number | null>(null);
+  const [showThemePanel, setShowThemePanel] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showPagesManager, setShowPagesManager] = useState(false);
@@ -49,7 +51,6 @@ const CatalogEditorContent: FC = () => {
     toggleSnapToGrid,
     undo,
     redo,
-    currentPageId,
     setCatalogName,
     resetEditor,
     importPages
@@ -67,21 +68,22 @@ const CatalogEditorContent: FC = () => {
     } else if (catalogId) {
       // Verificar se é um catálogo importado (do backend)
       const numericCatalogId = parseInt(catalogId);
+      setCurrentCatalogId(numericCatalogId);
 
       isImportedCatalog(numericCatalogId)
         .then(isImported => {
           if (isImported) {
             // Carregar catálogo do backend
-            console.log('[CatalogEditor] Carregando catálogo importado:', numericCatalogId);
+            import.meta.env.DEV && console.log('[CatalogEditor] Carregando catálogo importado:', numericCatalogId);
             return loadImportedCatalog(numericCatalogId);
           }
           return null;
         })
         .then(loaded => {
           if (loaded) {
-            console.log('[CatalogEditor] Catálogo importado carregado:', loaded.catalogName);
-            console.log('[CatalogEditor] Páginas:', loaded.pages.length);
-            console.log('[CatalogEditor] Design Tokens:', loaded.designTokens ? 'Sim' : 'Não');
+            import.meta.env.DEV && console.log('[CatalogEditor] Catálogo importado carregado:', loaded.catalogName);
+            import.meta.env.DEV && console.log('[CatalogEditor] Páginas:', loaded.pages.length);
+            import.meta.env.DEV && console.log('[CatalogEditor] Design Tokens:', loaded.designTokens ? 'Sim' : 'Não');
 
             // Importar páginas para o EditorStore
             importPages(loaded.pages, loaded.catalogName, loaded.designTokens);
@@ -108,6 +110,20 @@ const CatalogEditorContent: FC = () => {
   const selectedElements = currentPage?.elements.filter(el =>
     selectedElementIds.includes(el.id)
   ) || [];
+
+  // INC-01: persiste o conteúdo do editor no backend.
+  const handleSaveContent = async () => {
+    if (!currentCatalogId) {
+      toast.error('Abra um catálogo do servidor para poder salvar o conteúdo.');
+      return;
+    }
+    try {
+      const result = await catalogService.saveCatalogContent(currentCatalogId, pages);
+      toast.success(`Conteúdo salvo: ${result.pages} página(s), ${result.elements} elemento(s).`);
+    } catch {
+      toast.error('Falha ao salvar o conteúdo no servidor.');
+    }
+  };
 
   // Alignment handlers
   const handleAlign = (alignType: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
@@ -164,8 +180,8 @@ const CatalogEditorContent: FC = () => {
 
   // Keyboard shortcuts
   useEditorShortcuts({
-    onCopy: () => console.log('Copy'),
-    onPaste: () => console.log('Paste'),
+    onCopy: () => import.meta.env.DEV && console.log('Copy'),
+    onPaste: () => import.meta.env.DEV && console.log('Paste'),
     onDuplicate: () => selectedElementIds.forEach(id => duplicateElement(id)),
     onDelete: () => selectedElementIds.forEach(id => deleteElement(id)),
     onUndo: undo,
@@ -188,8 +204,13 @@ const CatalogEditorContent: FC = () => {
         <FigmaHeader
           onShowPreview={() => { setShowPDFPreview(true); }}
           onDownloadPDF={handleDownloadPDF}
+          onSave={handleSaveContent}
+          onOpenTheme={() => setShowThemePanel(true)}
         />
       )}
+
+      {/* INC-06: painel de tema global */}
+      <DesignTokensPanel open={showThemePanel} onClose={() => setShowThemePanel(false)} />
 
       {/* Main Layout */}
       <div className={`flex h-full ${uiVisible ? 'pt-14' : ''}`}>

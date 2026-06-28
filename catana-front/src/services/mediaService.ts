@@ -3,7 +3,7 @@ import type { Media, MediaFolder, MediaStats, MediaType } from '@/types/api';
 
 export interface MediaFilters {
   folder?: number | null;
-  media_type?: MediaType;
+  media_type?: MediaType | 'folder';
   is_favorite?: boolean;
   search?: string;
   sede?: number | null;

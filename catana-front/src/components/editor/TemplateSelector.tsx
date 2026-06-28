@@ -32,7 +32,7 @@ const PREDEFINED_TEMPLATES = [
 
 export const TemplateSelector: FC = () => {
   const { saveTemplate, deleteTemplate, getTemplatesByUser } = useTemplateStore();
-  const { pages, currentPageId, addElement, importCatalogFromJSON: importToEditor, resetEditor, setCatalogName } = useEditorStore();
+  const { pages, currentPageId, addElement, importCatalogFromJSON: importToEditor, resetEditor } = useEditorStore();
   const { user } = useAuthStore();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -42,13 +42,13 @@ export const TemplateSelector: FC = () => {
   const currentPage = pages.find((p) => p.id === currentPageId);
 
   // Filter templates for current user
-  const userTemplates = user ? getTemplatesByUser(user.id) : [];
+  const userTemplates = user ? getTemplatesByUser(String(user.id)) : [];
 
   const handleSaveTemplate = () => {
     if (!currentPage || !user) return;
 
     const name = newTemplateName.trim() || `Template ${userTemplates.length + 1} `;
-    saveTemplate(currentPage, name, user.id);
+    saveTemplate(currentPage, name, String(user.id));
     setNewTemplateName('');
     setIsSaving(false);
   };
@@ -94,7 +94,7 @@ export const TemplateSelector: FC = () => {
       resetEditor();
       importToEditor(catalogPages, catalogName || template.name, settings);
 
-      console.log(`[TemplateSelector] Loaded template: ${template.name}`);
+      import.meta.env.DEV && console.log(`[TemplateSelector] Loaded template: ${template.name}`);
     } catch (error) {
       console.error('[TemplateSelector] Error loading template:', error);
       alert(`Erro ao carregar template: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);

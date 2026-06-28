@@ -9,13 +9,6 @@ interface ChartDataPoint {
     label: number; // actual view count
 }
 
-interface TopCatalog {
-    rank: number;
-    name: string;
-    views: number;
-    trend: number;
-}
-
 export function useCatalogStats() {
     const [timeRange, setTimeRange] = useState<TimeRange>('7d');
     const [loading, setLoading] = useState(true);

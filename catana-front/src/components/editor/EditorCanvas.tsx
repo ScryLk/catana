@@ -191,7 +191,7 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
                 alt="Imagem do catálogo"
                 className="w-full h-full object-cover"
                 style={{ pointerEvents: 'none' }}
-                onLoad={() => console.log('[EditorCanvas] Imagem carregada com sucesso:', element.imageUrl)}
+                onLoad={() => import.meta.env.DEV && console.log('[EditorCanvas] Imagem carregada com sucesso:', element.imageUrl)}
                 onError={(e) => {
                   console.error('[EditorCanvas] Erro ao carregar imagem:', element.imageUrl);
                   e.currentTarget.style.display = 'none';
@@ -262,13 +262,15 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
           </div>
         );
       case 'line':
-        console.log('[EditorCanvas] Line element:', element);
-        console.log('[EditorCanvas] Has lineData:', !!element.lineData);
+        import.meta.env.DEV && console.log('[EditorCanvas] Line element:', element);
+        import.meta.env.DEV && console.log('[EditorCanvas] Has lineData:', !!element.lineData);
         if (element.lineData) {
           return (
             <Line
               data={element.lineData}
               isSelected={isSelected}
+              isLocked={element.locked ?? false}
+              elementPosition={element.position}
               onChange={(newData: LineData) => updateElement(element.id, { lineData: newData })}
             />
           );
@@ -281,7 +283,7 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
           </div>
         );
       default:
-        console.log('[EditorCanvas] Tipo não reconhecido:', element.type, 'element:', element);
+        import.meta.env.DEV && console.log('[EditorCanvas] Tipo não reconhecido:', element.type, 'element:', element);
         return (
           <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center" style={{
             ...element.style,

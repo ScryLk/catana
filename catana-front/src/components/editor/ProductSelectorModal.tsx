@@ -1,7 +1,6 @@
 import { type FC, useState, useEffect } from 'react';
 import { FiPackage, FiSearch, FiX, FiCheck, FiShoppingBag } from 'react-icons/fi';
 import { productService, type ProductReference } from '../../services/productService';
-import { useAuthStore } from '../../store/authStore';
 
 interface ProductSelectorModalProps {
   isOpen: boolean;
@@ -23,13 +22,12 @@ export const ProductSelectorModal: FC<ProductSelectorModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductReference | null>(null);
-  const { user } = useAuthStore();
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('[ProductSelectorModal] Loading products...');
+      import.meta.env.DEV && console.log('[ProductSelectorModal] Loading products...');
 
       const results = await productService.searchForEditor({
         query: searchQuery || undefined,
@@ -38,7 +36,7 @@ export const ProductSelectorModal: FC<ProductSelectorModalProps> = ({
         sede: sedeId,
       });
 
-      console.log('[ProductSelectorModal] Products loaded:', results.length);
+      import.meta.env.DEV && console.log('[ProductSelectorModal] Products loaded:', results.length);
       setProducts(results);
     } catch (err: any) {
       console.error('[ProductSelectorModal] Error loading products:', err);

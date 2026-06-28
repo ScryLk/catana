@@ -14,14 +14,10 @@ import {
   Bookmark,
   BookmarkCheck,
   Eye,
-  Calendar,
   Grid,
-  TrendingUp,
   Share2,
-  MoreVertical,
   Loader2,
   ArrowLeft,
-  ExternalLink,
 } from 'lucide-react';
 import { publicProfileService } from '../services/publicProfileService';
 import type { PublicProfile, PublicCatalog } from '../types/profile';
@@ -165,7 +161,7 @@ export const PublicProfilePage: FC = () => {
   const handleOpenChat = () => {
     if (!profile) return;
     // TODO: Abrir chat com o usuário
-    console.log('Abrir chat com:', profile.id);
+    import.meta.env.DEV && console.log('Abrir chat com:', profile.id);
   };
 
   if (isLoading) {

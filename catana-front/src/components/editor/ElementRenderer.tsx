@@ -1,11 +1,12 @@
 import { type FC } from 'react';
-import type { CatalogElement, LineData, ImageData } from '../../types/editor';
+import type { CatalogElement, LineData } from '../../types/editor';
 import type { Camera, ViewportRect } from '../../utils/lineCoordinates';
 import { QRCode } from './elements/QRCode';
 import { LineFigma } from './elements/LineFigma';
 import { ImageFigma } from './elements/ImageFigma';
 import { pluginRegistry } from '../../plugins/registry';
 import { useEditorStore } from '../../store/editorStore';
+import { resolveElementTokens } from '../../utils/themeResolve';
 
 interface ElementRendererProps {
   element: CatalogElement;
@@ -21,7 +22,7 @@ interface ElementRendererProps {
  * Used both in the canvas and for PDF export.
  */
 export const ElementRenderer: FC<ElementRendererProps> = ({
-  element,
+  element: rawElement,
   isPDF = false,
   isSelected = false,
   onResizeStateChange,
@@ -31,6 +32,10 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
   // Hooks para atualizar e selecionar elementos
   const updateElement = useEditorStore(state => state.updateElement);
   const setSelectedElement = useEditorStore(state => state.setSelectedElement);
+  const designTokens = useEditorStore(state => state.designTokens);
+
+  // INC-06: resolve referências $tokens.* contra o tema global antes de renderizar.
+  const element = resolveElementTokens(rawElement, designTokens);
 
   // Build border properties
   const buildBorderStyle = () => {
@@ -43,7 +48,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
 
       // Debug log
       if (!isPDF) {
-        console.log('[ElementRenderer] Building border:', {
+        import.meta.env.DEV && console.log('[ElementRenderer] Building border:', {
           element: element.id,
           type: element.type,
           borderProps,
@@ -70,7 +75,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
 
   // Debug baseStyle
   if (!isPDF && element.style?.borderWidth) {
-    console.log('[ElementRenderer] Applied baseStyle:', {
+    import.meta.env.DEV && console.log('[ElementRenderer] Applied baseStyle:', {
       element: element.id,
       baseStyle,
     });
@@ -198,14 +203,14 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               updateElement(element.id, updates);
             }}
             onSelect={() => {
-              console.log('[ElementRenderer] Image clicked, selecting element:', element.id);
+              import.meta.env.DEV && console.log('[ElementRenderer] Image clicked, selecting element:', element.id);
               setSelectedElement(element.id);
             }}
             onDelete={() => {
               useEditorStore.getState().deleteElement(element.id);
             }}
             onCommit={() => {
-              console.log('[ElementRenderer] Image committed');
+              import.meta.env.DEV && console.log('[ElementRenderer] Image committed');
             }}
           />
         );
@@ -286,8 +291,9 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
       const strokeCap = lineData.cap || 'round';
       const startArrow = lineData.startArrow || 'none';
       const endArrow = lineData.endArrow || 'none';
-      const arrowSizeMap = { small: 8, medium: 12, large: 16 };
-      const arrowSizePx = arrowSizeMap[lineData.arrowSize] || 12;
+      const arrowSizeMap: Record<'small' | 'medium' | 'large', number> = { small: 8, medium: 12, large: 16 };
+      const arrowSizeKey = lineData.arrowSize as 'small' | 'medium' | 'large' | undefined;
+      const arrowSizePx = (arrowSizeKey && arrowSizeMap[arrowSizeKey]) || 12;
 
       // Dash pattern
       let dashArray = undefined;
@@ -412,16 +418,16 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               updateElement(element.id, { lineData: newData });
             }}
             onSelect={() => {
-              console.log('[ElementRenderer] Line clicked, selecting element:', element.id);
+              import.meta.env.DEV && console.log('[ElementRenderer] Line clicked, selecting element:', element.id);
               setSelectedElement(element.id);
             }}
             onDelete={() => {
               // Remove element from store
-              useEditorStore.getState().removeElement(element.id);
+              useEditorStore.getState().deleteElement(element.id);
             }}
             onCommit={() => {
               // Commit to history (optional callback for future undo/redo)
-              console.log('[ElementRenderer] Line committed');
+              import.meta.env.DEV && console.log('[ElementRenderer] Line committed');
             }}
             onResizeStateChange={(isResizing) => {
               onResizeStateChange?.(element.id, isResizing);

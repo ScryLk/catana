@@ -32,7 +32,7 @@ export const MediaLibraryModal: FC<MediaLibraryModalProps> = ({
     try {
       setLoadingMedia(true);
       setLoadError(null);
-      console.log('[MediaLibraryModal] Carregando imagens do /media...');
+      import.meta.env.DEV && console.log('[MediaLibraryModal] Carregando imagens do /media...');
 
       const images = await mediaService.getImagesForEditor({
         folder: currentFolder || undefined,
@@ -40,7 +40,7 @@ export const MediaLibraryModal: FC<MediaLibraryModalProps> = ({
         limit: 50,
       });
 
-      console.log('[MediaLibraryModal] Imagens carregadas:', images);
+      import.meta.env.DEV && console.log('[MediaLibraryModal] Imagens carregadas:', images);
       setMediaImages(images);
     } catch (error: any) {
       console.error('[MediaLibraryModal] Erro ao carregar imagens:', error);

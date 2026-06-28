@@ -5,7 +5,7 @@
  */
 
 import { type FC, useState, useEffect } from 'react';
-import { X, Lock, Eye, MessageCircle, Users, Save, Loader2 } from 'lucide-react';
+import { Lock, Eye, MessageCircle, Users, Save, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { publicProfileService } from '../../services/publicProfileService';
 import type { ProfileSettings, ProfileVisibility } from '../../types/profile';

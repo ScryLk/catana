@@ -93,6 +93,18 @@ class ProductSerializer(serializers.ModelSerializer):
             return obj.saves.filter(id=request.user.id).exists()
         return False
 
+    def validate_specs(self, value):
+        # DIV-07: specs é uma lista de especificações.
+        if not isinstance(value, list):
+            raise serializers.ValidationError('specs deve ser uma lista.')
+        return value
+
+    def validate_dropshipping_info(self, value):
+        # DIV-07: dropshipping_info é um objeto.
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('dropshipping_info deve ser um objeto JSON.')
+        return value
+
 class PublicProductSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -127,6 +139,12 @@ class ThemeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Theme
         fields = '__all__'
+
+    def validate_styles(self, value):
+        # DIV-07: styles guarda designTokens e aparência global; deve ser objeto.
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('styles deve ser um objeto JSON.')
+        return value
 
 class CatalogSerializer(serializers.ModelSerializer):
     cover_image = serializers.SerializerMethodField()
@@ -218,6 +236,12 @@ class ComponentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Component
         fields = '__all__'
+
+    def validate_content(self, value):
+        # DIV-07: content guarda o JSON do elemento do editor; deve ser objeto.
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('content deve ser um objeto JSON.')
+        return value
 
 class PageComponentSerializer(serializers.ModelSerializer):
     class Meta:

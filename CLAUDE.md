@@ -19,7 +19,7 @@ catana/
 ├── catana-back/    # API REST — Django + DRF (Python)    [repo git próprio]
 └── catana-front/   # SPA — React 19 + Vite + TS          [repo git próprio]
 ```
-> ⚠️ Cada subpasta é um **repositório git independente** (não há git na raiz). Commits/branches são feitos dentro de `catana-back/` ou `catana-front/`.
+> ✅ **Monorepo git único na raiz.** Os antigos submódulos viraram pastas normais; há um só `.git` em `catana/`. Commits/branches são feitos na raiz e podem tocar os dois apps. Há CI em `.github/workflows/ci.yml` (back: `check` + `test`; front: `build` + `test`; lint não-bloqueante) e um `README.md` de monorepo na raiz.
 
 Fluxo de dados: Front (axios, JWT no `localStorage`) → `http://localhost:8000/api/...` (DRF ViewSets) → PostgreSQL. Mídias servidas de `/media/`.
 
@@ -27,7 +27,7 @@ Fluxo de dados: Front (axios, JWT no `localStorage`) → `http://localhost:8000/
 
 ## catana-back (API)
 
-**Stack:** Python 3.11 (Docker) / 3.9+ (local), Django 5.2+, Django REST Framework, PostgreSQL 15, JWT (`djangorestframework-simplejwt`), `drf-spectacular` (Swagger), `django-environ`, Pillow, `django-cors-headers`. Sem versões pinadas em `requirements.txt` (a confirmar/pinar antes de prod).
+**Stack:** Python 3.11 (Docker) / 3.9+ (local), Django 5.2+, Django REST Framework, PostgreSQL 15, JWT (`djangorestframework-simplejwt`), `drf-spectacular` (Swagger), `django-environ`, Pillow, `django-cors-headers`. Versões **pinadas** em `requirements.txt`.
 
 **Estrutura:**
 - `api/models.py` — TODOS os models (não há divisão por módulo). Entidades principais: `Organization`, `Sede`, `SedeSharing`, `User` (AbstractUser custom, `AUTH_USER_MODEL='api.User'`), `MediaFolder`/`Media`, `Category`, `Product`/`ProductMedia`, `Catalog`/`Page`/`Component`/`PageComponent`, `Theme`, `Activity`, `Notification`, `Conversation`/`Message`, `UserPreferences`, e o bloco social (`PublicProfile`, `ProfileFollow`, `ProfileSave`, `CatalogLike`, `CatalogView`, `BlockedUser`).
@@ -132,24 +132,24 @@ Aparência + posições ficam espalhadas em `PageComponent` (geometria) + `Compo
 ### 2. No editor (frontend, em memória) — formato de trabalho
 `src/store/editorStore.ts` mantém `pages: CatalogPage[]` → `elements: CatalogElement[]` (tipo em `src/types/editor.ts`: ~40 `ElementType`, cada elemento com `position`, `size`, `style`, e dados por tipo `textData`/`productData`/`imageData`…). Exporta/importa um **JSON schema v1.0** (`app:'Catana'`) via `src/services/catalogIO.service.ts`.
 
-### ⚠️ O round-trip está QUEBRADO (save relacional não existe)
+### ✅ O round-trip funciona (save relacional implementado — INC-01)
 - **Carregar do backend funciona:** `src/services/catalogLoader.service.ts` reconstrói `Page → PageComponent → Component.content` em elementos do editor e lê `Theme.styles.designTokens`.
-- **Salvar o conteúdo do editor de volta ao banco NÃO existe:** `src/services/catalogService.ts` só faz `POST`/`PATCH` de **metadados** (`title`, `description`, `is_public`…). Não há nenhuma chamada que grave `pages`/`page-components`/`components` a partir do editor.
-- O único "save" real do conteúdo é **baixar o JSON** (`downloadCatalogJSON`) ou **exportar PDF**. Um catálogo só "volta" do backend se as tabelas `Page`/`Component` foram populadas por fora (seed/script) — por isso `isImportedCatalog()` apenas checa se já existem páginas. **Para persistir o editor no backend é preciso criar esse endpoint de save (Page/PageComponent/Component), que hoje falta.**
+- **Salvar o conteúdo do editor também funciona:** `catalogService.saveCatalogContent(id, pages)` faz `POST /api/catalogs/{id}/save_content/`. A action no `CatalogViewSet` recria `Page/Component/PageComponent` numa **transação**, de forma **idempotente e sem órfãos**. O botão "Salvar" do `FigmaHeader` dispara esse save (além do `downloadCatalogJSON`/export PDF, que continuam).
+- Os viewsets CRUD genéricos de `Page/Component/PageComponent` existem em `urls.py`, mas a persistência do editor passa pela action transacional acima (não por chamadas CRUD avulsas).
 
-### Aparência: 3 camadas, mal conectadas
-1. **Por elemento (o que de fato funciona):** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização é **manual, elemento a elemento**, no PropertiesPanel.
-2. **Design Tokens globais (existe na arquitetura, desligado da UI):** sistema completo em `src/types/designTokens.ts` (`colors`/`typography`/`spacing`/`borderRadius`/`shadows` + `DEFAULT_DESIGN_TOKENS`), resolvedor `$tokens.colors.primary` em `src/services/referenceResolver.service.ts`, e ações `setDesignTokens/updateDesignTokens` no store. **Mas** começa `undefined`, só é preenchido via `Theme` do backend ou JSON importado, **não há painel para editar tokens**, e os templates DiPACK usam valores fixos (não referências `$tokens.*`). O "tema global de um clique" **não está exposto ao usuário**.
-3. **Templates (plugin DiPACK):** componentes React **hardcoded** em `src/plugins/dipack/templates/` (`DiPackCover`, `DiPackConfeitariaV2`…), visual fixo da marca, **não parametrizável** por cor/fonte. Inserir template = inserir um bloco fixo.
+### Aparência: 3 camadas
+1. **Por elemento:** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização manual, elemento a elemento, no PropertiesPanel.
+2. **Design Tokens globais (conectado — INC-06):** sistema em `src/types/designTokens.ts` (`colors`/`typography`/`spacing`/`borderRadius`/`shadows` + `DEFAULT_DESIGN_TOKENS`). O store **começa com `DEFAULT_DESIGN_TOKENS`** e há **painel de tema** (`DesignTokensPanel`, botão 🎨 no `FigmaHeader`): paleta, tipografia, presets de um clique e "Aplicar tema aos elementos" (`applyThemeToElements` troca cores/fontes literais por referências `$tokens.*`). O `ElementRenderer` **resolve `$tokens.*`** ao vivo via `utils/themeResolve.ts` (sobre o resolvedor de `types/designTokens.ts`), então editar o tema atualiza tudo na hora.
+3. **Templates (plugin DiPACK):** componentes React **hardcoded** em `src/plugins/dipack/templates/`, visual fixo da marca, **ainda não parametrizável** por token. Inserir template = inserir um bloco fixo.
 
-**Resumo:** hoje mudar aparência = estilizar na mão OU inserir template DiPACK fixo. **Não existe** seletor global de tema (paleta+tipografia+layout). A infra de design tokens existe mas está desconectada da UI e da persistência.
+**Resumo:** o "tema global de um clique" (paleta + tipografia) está exposto ao usuário e ligado ao renderer. Falta só parametrizar os templates DiPACK por tokens.
 
 ---
 
 ## Convenções
 
 - **Idioma:** código/comentários e UI em **português** (commits também). Identificadores de código em inglês/português misturados.
-- **Backend:** um app `api` monolítico; ViewSets DRF + router; permissões custom em `permissions.py`; paginação padrão 24/página (`StandardResultsSetPagination`).
+- **Backend:** um app `api` monolítico; ViewSets DRF + router; permissões custom em `permissions.py` (aplicadas em org/sede); **paginação global de 24/página** (`DEFAULT_PAGINATION_CLASS` + `PAGE_SIZE` no `REST_FRAMEWORK`).
 - **Frontend:** componentes funcionais + hooks; estado global em Zustand (não Redux); estilização Tailwind utility-first; imports via alias `@/`.
 - **Branches/commits:** sem convenção estrita (histórico tem mensagens como "a lot of changes"). Branch principal: `main` em ambos os repos.
 
@@ -157,15 +157,15 @@ Aparência + posições ficam espalhadas em `PageComponent` (geometria) + `Compo
 
 ## Armadilhas e cuidados ⚠️
 
-1. **Segredos commitados:** `.env` está **versionado** nos dois repos (no front, apesar de listado no `.gitignore` — foi commitado antes). O `SECRET_KEY` do Django e a senha do banco (`root/root`) estão expostos. Não tratar como seguro; rotacionar antes de qualquer deploy.
-2. **Autenticação efetivamente desligada no backend:** a maioria dos ViewSets usa `permission_classes = [permissions.AllowAny]` com *fallbacks de dev* que atribuem o primeiro superuser quando não há usuário autenticado (ex.: `OrganizationViewSet.perform_create`). As classes em `permissions.py` existem mas **não estão aplicadas** na maior parte das views. O gate real de acesso hoje é só o `<PrivateRoute>` no front. Não confie nisso para produção.
-3. **CORS e hosts abertos:** `CORS_ALLOW_ALL_ORIGINS = True` e `ALLOWED_HOSTS = ['*']` em `settings.py` (hardcoded, não por env). OK para dev, inseguro para prod.
-4. **`authStore.ts` ignora a env var:** usa `API_BASE_URL` **hardcoded** `http://localhost:8000`, enquanto `services/api.ts` respeita `VITE_API_BASE_URL`. Mudar a URL da API exige tocar nos dois lugares.
-5. **Inconsistência register:** `authStore.register()` espera `organization`/`default_sede` na resposta, mas a view `register_user` (`views.py`) só devolve `user/access/refresh`. Existe um `api/views_register_temp.py` à parte — conferir qual é o fluxo real antes de mexer (a confirmar).
-6. **Arquivos órfãos/backup:** `CatalogEditor.tsx.bak`, `PropertiesPanel.tsx.backup`, `views.py_explore_snippet`, `views_register_temp.py`, `analyze_groups.js`, PDFs/XLSX soltos na raiz do front. Não são fonte de verdade — não importar deles.
-7. **`editorStore.ts` tem muitos `console.log`** de debug ativos e IDs gerados com `Date.now()`. É o arquivo mais crítico e frágil do front — mexer com cuidado e testar undo/redo, multi-página e seleção.
-8. **Scripts utilitários do backend na raiz** (`seed_*`, `insert_*`, `fix_*`, `add_*`) rodam direto contra o banco. Ler antes de executar.
-9. **Sem testes reais:** `api/tests.py` está vazio e o front não tem suíte. Os `test_*.py`/`test_*.sh` do backend são scripts manuais de chamada à API, não testes automatizados.
+1. **Segredos no histórico:** o `.env` do back **foi removido do tracking** (agora há `.gitignore` no back + `.env.example`); o `.env` do front nunca esteve versionado. **Mas** o `SECRET_KEY` e a senha `root/root` antigos **continuam no histórico git** — `TODO(humano)`: rotacionar e expurgar (BFG/`git filter-repo`) antes de deploy.
+2. **Autenticação ligada (SEG-02/03):** o padrão global é `IsAuthenticated` (`REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES']`). A allowlist de públicos está documentada no topo de `api/views.py` (registro, login, refresh, explore, leituras de descoberta). Os fallbacks de "primeiro superuser" foram removidos e `permissions.py` está **aplicado** (`IsOrganizationAdmin` em org, `CanCreateSede` em sede). O `<PrivateRoute>` do front é só UX; o gate real é o backend.
+3. **CORS e hosts por env (SEG-04):** `ALLOWED_HOSTS` e `CORS_ALLOWED_ORIGINS` vêm de env, com default restrito quando `DEBUG=False`; `CORS_ALLOW_ALL_ORIGINS` só liga em dev. Hardening de SSL/HSTS/cookies em `settings.py` sob `if not DEBUG`.
+4. **Base URL central (FRG-04):** `authStore.ts` e `catalogLoader.service.ts` agora respeitam `VITE_API_BASE_URL` (via `services/api.ts`). O 401 no interceptor de `api.ts` limpa a sessão e redireciona para `/login`. JWT ainda em `localStorage` — `TODO(arquitetura)` avaliar cookie HttpOnly.
+5. **Registro (FRG-05):** `register_user` provisiona `Organization` + `Sede` padrão e retorna ambos, alinhado ao que `authStore.register()` consome. Os arquivos `views_register_temp.py`/`authService.register()` mortos foram removidos.
+6. **Build do front OK (FRG-01):** `npm run build` (`tsc -b && vite build`) passa limpo. Alias `@` configurado em `tsconfig.app.json` + `src/vite-env.d.ts`. IDs do editor usam `crypto.randomUUID()` (`utils/id.ts`); `console.log` gated por `import.meta.env.DEV`.
+7. **`editorStore.ts`** segue sendo o arquivo mais crítico do front — testar undo/redo, multi-página e seleção ao mexer (há testes em `editorStore.test.ts`).
+8. **Scripts utilitários do backend** foram movidos para `catana-back/scripts/` (com README). Rodam direto contra o banco — ler antes de executar.
+9. **Testes (DIV-04):** `api/tests.py` cobre auth, save_content e bulk_import (`manage.py test`); o front tem Vitest (`npm test`, `editorStore.test.ts`). Os `test_*` em `scripts/` continuam sendo chamadas manuais, não automatizadas.
 
 ---
 

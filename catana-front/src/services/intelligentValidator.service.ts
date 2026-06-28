@@ -7,7 +7,7 @@
  * para garantir catálogos profissionais.
  */
 
-import { PAGE_PRESETS, SPACING, TYPOGRAPHY_RULES, isValidSpacing, normalizeSpacing } from '../types/layoutRules';
+import { PAGE_PRESETS, TYPOGRAPHY_RULES, isValidSpacing, normalizeSpacing } from '../types/layoutRules';
 
 // ============================================
 // TIPOS DE SEVERIDADE

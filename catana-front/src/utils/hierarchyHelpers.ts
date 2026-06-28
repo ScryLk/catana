@@ -114,7 +114,7 @@ export const localToGlobal = (
   element: CatalogElement,
   allElements: CatalogElement[]
 ): Position => {
-  let globalPos = { ...position };
+  const globalPos = { ...position };
   let current = element;
 
   // Subir na hierarquia somando posições
@@ -271,7 +271,7 @@ function pointToLineDistance(
 export const findTopElementAtPoint = (
   point: Position,
   elements: CatalogElement[],
-  zoom: number
+  _zoom: number
 ): CatalogElement | null => {
   // Ordenar por z-index decrescente (do topo para baixo)
   const sorted = sortByZIndex(elements).reverse();

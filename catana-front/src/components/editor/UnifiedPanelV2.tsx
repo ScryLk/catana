@@ -1,6 +1,6 @@
 
 import { type FC } from 'react';
-import { Layers, Settings, Sparkles, Grid, X, Package, LayoutTemplate } from 'lucide-react';
+import { Settings, Sparkles, Grid, X, Package, LayoutTemplate } from 'lucide-react';
 import { LayersPanel } from './LayersPanel';
 import { PropertiesPanel } from './PropertiesPanel';
 import { GeminiPanel } from './GeminiPanel';

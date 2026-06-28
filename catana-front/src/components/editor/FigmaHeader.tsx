@@ -17,6 +17,8 @@ import {
   LogOut,
   Check,
   Loader2,
+  Save,
+  Palette,
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAuthStore } from '../../store/authStore';
@@ -24,11 +26,13 @@ import { useAuthStore } from '../../store/authStore';
 interface Props {
   onShowPreview?: () => void;
   onDownloadPDF?: () => void;
+  onSave?: () => void | Promise<void>;
+  onOpenTheme?: () => void;
 }
 
 type CatalogStatus = 'draft' | 'published' | 'archived';
 
-export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF }) => {
+export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF, onSave, onOpenTheme }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const {
@@ -73,15 +77,19 @@ export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Simulate auto-save
-  useEffect(() => {
+  // INC-01: salva o conteúdo do editor no backend (substitui o auto-save fake).
+  const [hasSavedOnce, setHasSavedOnce] = useState(false);
+  const handleSave = async () => {
+    if (!onSave || isSaving) return;
     setIsSaving(true);
-    const timeout = setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await onSave();
       setLastSaved(new Date());
-    }, 1000);
-    return () => clearTimeout(timeout);
-  }, [catalogName]);
+      setHasSavedOnce(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const zoomLevels = [25, 50, 75, 100, 125, 150, 200];
 
@@ -213,6 +221,17 @@ export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF }) => {
 
         <div className="h-4 w-px bg-gray-300/50 dark:bg-zinc-700/50 mx-1" />
 
+        {/* Tema global */}
+        {onOpenTheme && (
+          <button
+            onClick={onOpenTheme}
+            className="w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-zinc-800/50 rounded-md transition-colors"
+            title="Tema global (cores e tipografia)"
+          >
+            <Palette className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Preview Toggle */}
         <button
           onClick={onShowPreview}
@@ -225,20 +244,33 @@ export const FigmaHeader: FC<Props> = ({ onShowPreview, onDownloadPDF }) => {
 
       {/* RIGHT: Primary Actions */}
       <div className="flex items-center gap-2">
-        {/* Auto-save Indicator */}
+        {/* Indicador de salvamento */}
         <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
           {isSaving ? (
             <>
               <Loader2 className="w-3 h-3 animate-spin" />
               <span>Salvando...</span>
             </>
-          ) : (
+          ) : hasSavedOnce ? (
             <>
               <Check className="w-3 h-3 text-green-600 dark:text-green-500" />
               <span>{formatLastSaved()}</span>
             </>
-          )}
+          ) : null}
         </div>
+
+        {/* Salvar no backend */}
+        {onSave && (
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-zinc-800 rounded-md hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+            title="Salvar conteúdo no servidor"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Salvar</span>
+          </button>
+        )}
 
         <div className="h-4 w-px bg-gray-300/50 dark:bg-zinc-700/50" />
 

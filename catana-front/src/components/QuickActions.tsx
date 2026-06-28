@@ -1,45 +1,12 @@
 import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Share2, BookOpen } from 'lucide-react';
+import { Upload, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { CreateCatalogModal } from './catalog/CreateCatalogModal';
-
-const actions = [
-  {
-    id: 'new-catalog',
-    title: 'Novo Catálogo',
-    description: 'Criar novo catálogo',
-    icon: BookOpen,
-    path: null, // Handled by modal
-    action: 'create-catalog'
-  },
-  {
-    id: 'upload-media',
-    title: 'Upload de Mídia',
-    description: 'Enviar imagens e vídeos',
-    icon: Upload,
-    path: '/media'
-  },
-  {
-    id: 'share',
-    title: 'Compartilhar',
-    description: 'Gerar links de compartilhamento',
-    icon: Share2,
-    path: null // No path yet
-  },
-];
 
 export const QuickActions: FC = () => {
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const handleAction = (action: any) => {
-    if (action.action === 'create-catalog') {
-      setShowCreateModal(true);
-    } else if (action.path) {
-      navigate(action.path);
-    }
-  };
 
   return (
     <section>

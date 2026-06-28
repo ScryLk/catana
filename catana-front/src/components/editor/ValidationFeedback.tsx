@@ -89,7 +89,6 @@ export const ValidationFeedback: FC<ValidationFeedbackProps> = ({
 
   const criticalIssues = report.issues.filter(i => i.severity === 'critical');
   const warningIssues = report.issues.filter(i => i.severity === 'warning');
-  const infoIssues = report.issues.filter(i => i.severity === 'info');
 
   return (
     <div className="space-y-4">

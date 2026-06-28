@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { genId } from '../utils/id';
 import { persist } from 'zustand/middleware';
 import type { CatalogPage } from '../types/editor';
 
@@ -26,7 +27,7 @@ export const useTemplateStore = create<TemplateStore>()(
 
       saveTemplate: (page, name, userId) => {
         const newTemplate: SavedTemplate = {
-          id: `template-${Date.now()}`,
+          id: genId('template'),
           userId,
           name: name || `Template ${new Date().toLocaleDateString()}`,
           elements: page.elements,

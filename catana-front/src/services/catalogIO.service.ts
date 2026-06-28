@@ -4,6 +4,7 @@
  * Serviço centralizado para exportar e importar catálogos em JSON
  */
 
+import { genId } from '../utils/id';
 import type { CatalogPage, CatalogElement } from '../types/editor';
 import type {
   CatalogExportSchema,
@@ -14,7 +15,6 @@ import type {
   ValidationWarning,
   ImportPreview,
   ImportOptions,
-  ImportResult,
 } from '../types/catalogIO';
 
 /**
@@ -318,7 +318,7 @@ export function generateImportPreview(
  */
 export function importCatalog(
   schema: CatalogExportSchema,
-  options?: ImportOptions
+  _options?: ImportOptions
 ): {
   pages: CatalogPage[];
   catalogName: string;
@@ -341,7 +341,7 @@ export function importCatalog(
 
   const getRealId = (logicalId: string, prefix: string = 'element'): string => {
     if (!idMap.has(logicalId)) {
-      const newId = `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newId = genId(prefix);
       idMap.set(logicalId, newId);
     }
     return idMap.get(logicalId)!;
@@ -385,6 +385,7 @@ function convertElementFromExport(
     position: { ...exportElement.position },
     size: { ...exportElement.size },
     pageId,
+    style: exportElement.style || {},
     zIndex: exportElement.zIndex ?? 0,
     visible: exportElement.visible ?? true,
     locked: exportElement.locked ?? false,

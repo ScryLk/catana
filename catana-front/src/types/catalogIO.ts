@@ -5,7 +5,7 @@
  * Schema Version: 1.0
  */
 
-import type { CatalogPage, CatalogElement, HeaderFooterConfig } from './editor';
+import type { CatalogElement, HeaderFooterConfig } from './editor';
 import type { DesignTokens } from './designTokens';
 
 /**

@@ -9,7 +9,6 @@ import {
   List,
   Heart,
   FolderPlus,
-  Loader2,
   Image as ImageIcon,
   Film,
   FileText,

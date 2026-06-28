@@ -17,7 +17,7 @@ interface ExportSettings {
 }
 
 export const ExportModal: FC<Props> = ({ isOpen, onClose }) => {
-  const { pages, catalogName, getCurrentPage } = useEditorStore();
+  const { pages, catalogName } = useEditorStore();
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);

@@ -6,7 +6,7 @@ import type { CustomComponent } from '../../store/componentStore';
 
 export const ComponentsPanel: FC = () => {
   const { components, deleteComponent } = useComponentStore();
-  const { pages, currentPageId, getCurrentPage } = useEditorStore();
+  const { pages, getCurrentPage } = useEditorStore();
 
   const categories: { value: CustomComponent['category']; label: string; icon: string }[] = [
     { value: 'header', label: 'Cabeçalhos', icon: '📄' },

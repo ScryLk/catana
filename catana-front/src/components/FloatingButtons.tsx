@@ -1,4 +1,4 @@
-import { type FC, useContext } from 'react';
+import { type FC } from 'react';
 import { FiLayers } from 'react-icons/fi';
 import { usePanelContext } from '../contexts/PanelContext';
 

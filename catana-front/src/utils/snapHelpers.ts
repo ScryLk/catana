@@ -18,7 +18,7 @@ export function calculateSnap(
   snapToGrid: boolean,
   gridSize: number
 ): SnapResult {
-  let finalPosition = { ...newPosition };
+  const finalPosition = { ...newPosition };
   const guides: Guide[] = [];
 
   // Snap to grid
