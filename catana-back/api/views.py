@@ -812,6 +812,46 @@ class CatalogViewSet(viewsets.ModelViewSet):
             'elements': created_elements,
         })
 
+    @action(detail=False, methods=['post'], url_path='gerar-demo',
+            permission_classes=[permissions.AllowAny])
+    def gerar_demo(self, request):
+        """
+        Gera um catálogo de demonstração temático (síncrono). Público (AllowAny),
+        por decisão de produto: serve para divulgação. Reusa a mesma lógica do
+        management command (api/demo/generator.py).
+
+        Body: { tema, estrutura?='completo', secoes?=[], b2b?=false, periodo? }
+        """
+        from .demo.generator import gerar_catalogo_demo, ESTRUTURAS
+        from .demo.themes import TEMAS_VALIDOS
+
+        data = request.data or {}
+        tema = data.get('tema')
+        if tema not in TEMAS_VALIDOS:
+            return Response(
+                {'error': f'Tema inválido. Opções: {", ".join(TEMAS_VALIDOS)}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        estrutura = data.get('estrutura', 'completo')
+        if estrutura not in (*ESTRUTURAS.keys(), 'custom'):
+            estrutura = 'completo'
+
+        try:
+            catalog = gerar_catalogo_demo(
+                tema=tema,
+                estrutura=estrutura,
+                secoes=data.get('secoes'),
+                b2b=bool(data.get('b2b')),
+                periodo=data.get('periodo'),
+            )
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {'catalog_id': catalog.id, 'title': catalog.title, 'pages': catalog.pages.count()},
+            status=status.HTTP_201_CREATED,
+        )
+
 class PageViewSet(viewsets.ModelViewSet):
     queryset = Page.objects.all()
     serializer_class = PageSerializer

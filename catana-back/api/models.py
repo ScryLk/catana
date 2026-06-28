@@ -211,6 +211,9 @@ class Catalog(models.Model):
     sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, related_name='catalogs', null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     is_public = models.BooleanField(default=False)
+    # Catálogo de demonstração gerado automaticamente (marketing). Permite
+    # filtrar, badgear e limpar os demos sem misturar com catálogos reais.
+    is_demo = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     likes = models.ManyToManyField(User, related_name='liked_catalogs', blank=True)
