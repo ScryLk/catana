@@ -34,7 +34,8 @@ Fluxo de dados: Front (axios, JWT no `localStorage`) → `http://localhost:8000/
 - `api/views.py` (~1000 linhas) — todos os ViewSets + function-views (`register_user`, `dashboard_stats`, `global_search`, `profile_view`, etc).
 - `api/serializers.py`, `api/urls.py` (router DRF), `api/permissions.py` (classes de permissão custom em 2 níveis org/sede).
 - `api/migrations/` — 22 migrações; **sempre** rodar `makemigrations` após mexer em models.
-- `api/management/commands/` — `seed_public_profiles`, `set_public_flag`.
+- `api/management/commands/` — `seed_public_profiles`, `set_public_flag`, `gerar_catalogo_demo` (catálogo de demonstração — ver seção própria).
+- `api/demo/` — gerador do catálogo de demonstração (`generator.py`, `themes.py`); assets em `demo_assets/<tema>/`. Ver seção **Catálogo de Demonstração**.
 - `catana_back/settings.py`, `urls.py` — config do projeto. Entrypoint: `manage.py`.
 - Raiz: dezenas de **scripts utilitários soltos** (`seed_database.py`, `insert_fake_products.py`, `add_product_images.py`, `fix_media_*.py`, `test_*.py`/`test_*.sh`) — scripts ad-hoc, não são testes automatizados.
 
@@ -143,6 +144,43 @@ Aparência + posições ficam espalhadas em `PageComponent` (geometria) + `Compo
 3. **Templates (plugin DiPACK):** componentes React **hardcoded** em `src/plugins/dipack/templates/`, visual fixo da marca, **ainda não parametrizável** por token. Inserir template = inserir um bloco fixo.
 
 **Resumo:** o "tema global de um clique" (paleta + tipografia) está exposto ao usuário e ligado ao renderer. Falta só parametrizar os templates DiPACK por tokens.
+
+---
+
+## Catálogo de Demonstração (demo)
+
+Gerador que cria um **catálogo completo, temático e pronto** direto no banco — para divulgação/onboarding. Escreve nas mesmas tabelas do editor (`Organization/Sede/Category/Product/Media/Catalog/Page/Component/PageComponent`), com o estilo do tema **"baked"** em valores concretos no `Component.content` (não usa design tokens globais).
+
+### Onde fica
+- `catana-back/api/demo/generator.py` — `gerar_catalogo_demo(...)`: monta org/sede/categorias/produtos/mídias e as páginas (capa, apresentação, sobre, índice, produtos, especiais, preços, como comprar, termos, contracapa). Geometria em **794×1123 (A4 @96dpi)**, igual ao editor/PDF.
+- `catana-back/api/demo/themes.py` — **6 ramos/temas**: `padaria`, `acougue`, `mercado`, `restaurante`, `festas`, `boutique`. Cada um com `paleta` (hex) + `fontes` + `nome`.
+- `catana-back/demo_assets/<tema>/` — `manifest.json` (empresa, `categorias`, `produtos` com `imagem`/`preco`/`specs`, bloco `b2b`) + `images/` (fotos dos produtos).
+
+### Propriedades / comportamento
+- **`Catalog.is_demo`** (migração `0023`): catálogos demo são **públicos** — `CatalogViewSet.get_queryset` inclui `Q(is_demo=True)`, então **qualquer usuário autenticado** abre o demo (mesmo sendo de outra org).
+- **Dono dedicado:** cria o usuário `catana_demo` + org `[DEMO] <nome>` + sede `Matriz`. O catálogo **não** pertence ao usuário logado.
+- **Idempotente:** regerar um tema **apaga a org demo anterior** (cascata) e recria — ou seja, **o `catalog_id` muda a cada geração**. Abra sempre o id mais recente.
+- **Estruturas:** `completo` (todas as seções) · `essencial` (capa, apresentação, produtos, como comprar, contracapa) · `custom` (escolhe `secoes`). `divisores` é modificador (faixa de categoria), não página.
+- **Imagens:** gravadas como URL **relativa** `/media/...` (o front prefixa a base via `absMedia` no `catalogLoader.service.ts`).
+
+### Como gerar
+```bash
+# CLI (backend)
+python manage.py gerar_catalogo_demo --tema padaria
+python manage.py gerar_catalogo_demo --tema acougue --estrutura essencial
+python manage.py gerar_catalogo_demo --tema festas --estrutura custom --secoes capa produtos contracapa --b2b --periodo "Primavera 2026"
+```
+- **Endpoint:** `POST /api/catalogs/gerar-demo/` (**AllowAny**, público por decisão de produto). Body `{tema, estrutura?, secoes?, b2b?, periodo?}` → `{catalog_id, title, pages}`.
+- **Front:** `components/catalog/GerarDemoModal.tsx` (botão em `UserCatalogs`) → `catalogService.gerarDemo()` → navega para `/editor?catalog=<id>`.
+
+### Imagens dos produtos (scripts)
+- `catana-back/scripts/baixar_imagens_demo.py` — baixa **fotos reais** por produto: **Pexels** primário (via `PEXELS_API_KEY` **no ambiente** — termos em inglês por categoria + rotação para variedade), **Wikimedia Commons** como fallback keyless; recorta em *cover* 800×600. A **API key não é versionada**.
+- `catana-back/scripts/gerar_placeholders_demo.py` — placeholders on-brand (Pillow) como rede de segurança quando não há foto.
+- Fluxo: rodar o script → **regerar o catálogo** (`gerar_catalogo_demo`) para copiar as imagens novas para `/media/`.
+
+### Cuidados ⚠️
+- O **load do editor** depende de `GET /api/pages/?catalog=` e `/api/page-components/?page=` **filtrarem por FK e sem paginação** (o `?page=` colide com a paginação global do DRF). Já corrigido em `PageViewSet`/`PageComponentViewSet` (`pagination_class=None` + `get_queryset`) — não reintroduzir paginação nesses dois.
+- Não commitar a `PEXELS_API_KEY` (o `.env` deste repo é versionado).
 
 ---
 
