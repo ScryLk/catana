@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
@@ -147,7 +148,7 @@ export const useAuthStore = create<AuthStore>()(
         const token = localStorage.getItem('access_token');
 
         if (user && token) {
-          import.meta.env.DEV && console.log('User authenticated:', user.name);
+          logger.debug('User authenticated:', user.name);
         } else if (!token && user) {
           // Token expirado mas ainda tem user no store
           set({ user: null, isAuthenticated: false });

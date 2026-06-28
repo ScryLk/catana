@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { type FC, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FigmaHeader } from '../components/editor/FigmaHeader';
@@ -74,16 +75,16 @@ const CatalogEditorContent: FC = () => {
         .then(isImported => {
           if (isImported) {
             // Carregar catálogo do backend
-            import.meta.env.DEV && console.log('[CatalogEditor] Carregando catálogo importado:', numericCatalogId);
+            logger.debug('[CatalogEditor] Carregando catálogo importado:', numericCatalogId);
             return loadImportedCatalog(numericCatalogId);
           }
           return null;
         })
         .then(loaded => {
           if (loaded) {
-            import.meta.env.DEV && console.log('[CatalogEditor] Catálogo importado carregado:', loaded.catalogName);
-            import.meta.env.DEV && console.log('[CatalogEditor] Páginas:', loaded.pages.length);
-            import.meta.env.DEV && console.log('[CatalogEditor] Design Tokens:', loaded.designTokens ? 'Sim' : 'Não');
+            logger.debug('[CatalogEditor] Catálogo importado carregado:', loaded.catalogName);
+            logger.debug('[CatalogEditor] Páginas:', loaded.pages.length);
+            logger.debug('[CatalogEditor] Design Tokens:', loaded.designTokens ? 'Sim' : 'Não');
 
             // Importar páginas para o EditorStore
             importPages(loaded.pages, loaded.catalogName, loaded.designTokens);
@@ -180,8 +181,8 @@ const CatalogEditorContent: FC = () => {
 
   // Keyboard shortcuts
   useEditorShortcuts({
-    onCopy: () => import.meta.env.DEV && console.log('Copy'),
-    onPaste: () => import.meta.env.DEV && console.log('Paste'),
+    onCopy: () => logger.debug('Copy'),
+    onPaste: () => logger.debug('Paste'),
     onDuplicate: () => selectedElementIds.forEach(id => duplicateElement(id)),
     onDelete: () => selectedElementIds.forEach(id => deleteElement(id)),
     onUndo: undo,

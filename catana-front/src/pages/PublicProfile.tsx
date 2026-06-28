@@ -4,6 +4,7 @@
  * Página de visualização de perfil público com catálogos e interações
  */
 
+import { logger } from '../utils/logger';
 import { type FC, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -161,7 +162,7 @@ export const PublicProfilePage: FC = () => {
   const handleOpenChat = () => {
     if (!profile) return;
     // TODO: Abrir chat com o usuário
-    import.meta.env.DEV && console.log('Abrir chat com:', profile.id);
+    logger.debug('Abrir chat com:', profile.id);
   };
 
   if (isLoading) {

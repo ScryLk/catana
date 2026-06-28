@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import { type FC } from 'react';
 import type { CatalogElement, LineData } from '../../types/editor';
 import type { Camera, ViewportRect } from '../../utils/lineCoordinates';
@@ -48,7 +49,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
 
       // Debug log
       if (!isPDF) {
-        import.meta.env.DEV && console.log('[ElementRenderer] Building border:', {
+        logger.debug('[ElementRenderer] Building border:', {
           element: element.id,
           type: element.type,
           borderProps,
@@ -75,7 +76,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
 
   // Debug baseStyle
   if (!isPDF && element.style?.borderWidth) {
-    import.meta.env.DEV && console.log('[ElementRenderer] Applied baseStyle:', {
+    logger.debug('[ElementRenderer] Applied baseStyle:', {
       element: element.id,
       baseStyle,
     });
@@ -203,14 +204,14 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               updateElement(element.id, updates);
             }}
             onSelect={() => {
-              import.meta.env.DEV && console.log('[ElementRenderer] Image clicked, selecting element:', element.id);
+              logger.debug('[ElementRenderer] Image clicked, selecting element:', element.id);
               setSelectedElement(element.id);
             }}
             onDelete={() => {
               useEditorStore.getState().deleteElement(element.id);
             }}
             onCommit={() => {
-              import.meta.env.DEV && console.log('[ElementRenderer] Image committed');
+              logger.debug('[ElementRenderer] Image committed');
             }}
           />
         );
@@ -418,7 +419,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               updateElement(element.id, { lineData: newData });
             }}
             onSelect={() => {
-              import.meta.env.DEV && console.log('[ElementRenderer] Line clicked, selecting element:', element.id);
+              logger.debug('[ElementRenderer] Line clicked, selecting element:', element.id);
               setSelectedElement(element.id);
             }}
             onDelete={() => {
@@ -427,7 +428,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
             }}
             onCommit={() => {
               // Commit to history (optional callback for future undo/redo)
-              import.meta.env.DEV && console.log('[ElementRenderer] Line committed');
+              logger.debug('[ElementRenderer] Line committed');
             }}
             onResizeStateChange={(isResizing) => {
               onResizeStateChange?.(element.id, isResizing);

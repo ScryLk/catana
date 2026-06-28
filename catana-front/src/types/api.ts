@@ -158,6 +158,7 @@ export interface Catalog {
   created_at: string;
   updated_at: string;
   is_public?: boolean;
+  is_demo?: boolean;
   status?: 'published' | 'draft' | 'archived';
   cover_image?: string;
   pages_count?: number;

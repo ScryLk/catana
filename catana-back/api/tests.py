@@ -104,6 +104,41 @@ class SaveContentTests(APITestCase):
         self.assertEqual(PageComponent.objects.count(), 3)
 
 
+class DemoGeneratorTests(APITestCase):
+    """Catálogo de demonstração: gera, é idempotente e baka estilo no content."""
+
+    def test_gera_padaria_completo(self):
+        from .demo.generator import gerar_catalogo_demo
+        from .models import Page, PageComponent
+        cat = gerar_catalogo_demo(tema='padaria', estrutura='completo')
+        self.assertTrue(cat.is_demo)
+        self.assertGreaterEqual(cat.pages.count(), 10)
+        # geometria no PageComponent, estilo baked no Component.content
+        pc = PageComponent.objects.filter(component__content__type='text-title').first()
+        self.assertIsNotNone(pc)
+        self.assertIn('textColor', pc.component.content['style'])
+        # imagem com URL relativa /media/ em imageUrl e imageData.src
+        img = PageComponent.objects.filter(component__component_type='image').first()
+        self.assertTrue(img.component.content['imageUrl'].startswith('/media/'))
+        self.assertEqual(img.component.content['imageData']['src'],
+                         img.component.content['imageUrl'])
+
+    def test_idempotente(self):
+        from .demo.generator import gerar_catalogo_demo
+        from .models import Catalog, Organization
+        gerar_catalogo_demo(tema='padaria')
+        gerar_catalogo_demo(tema='padaria')
+        self.assertEqual(Catalog.objects.filter(is_demo=True).count(), 1)
+        self.assertEqual(Organization.objects.filter(name__startswith='[DEMO]').count(), 1)
+
+    def test_endpoint_allowany(self):
+        # Sem autenticação (decisão de produto: público).
+        r = self.client.post('/api/catalogs/gerar-demo/',
+                             {'tema': 'padaria', 'estrutura': 'essencial'}, format='json')
+        self.assertEqual(r.status_code, 201)
+        self.assertIn('catalog_id', r.data)
+
+
 class BulkImportTests(APITestCase):
     """INC-05: importação de produtos em lote."""
 

@@ -1,0 +1,42 @@
+{
+  "tema": "padaria",
+  "empresa": {
+    "nome": "Padaria Pão Dourado",
+    "slogan": "O sabor que abraça o seu dia",
+    "sobre": "Há mais de 30 anos assando pães artesanais com fermentação natural e ingredientes selecionados. Da nossa família para a sua mesa, com o cheirinho de pão quentinho todas as manhãs.",
+    "contato": {
+      "telefone": "(11) 4002-8922",
+      "endereco": "Rua das Massas, 123 - Vila do Trigo, São Paulo - SP",
+      "instagram": "@paodourado",
+      "whatsapp": "(11) 99999-0000"
+    },
+    "logo": null
+  },
+  "categorias": ["Pães", "Bolos e Tortas", "Salgados", "Doces", "Bebidas"],
+  "b2b": {
+    "titulo": "Atacado para cafeterias e mercados",
+    "faixas": [
+      { "quantidade": "10 a 49 un", "desconto": "10% off" },
+      { "quantidade": "50 a 99 un", "desconto": "18% off" },
+      { "quantidade": "100+ un", "desconto": "25% off" }
+    ],
+    "observacao": "Pedidos de atacado com 24h de antecedência. Entrega própria na região."
+  },
+  "produtos": [
+    { "nome": "Pão Francês", "descricao": "Crocante por fora, macio por dentro. Assado de hora em hora.", "preco": "0.90", "categoria": "Pães", "imagem": "pao-frances.jpg", "specs": [{ "label": "Unidade", "value": "50g" }] },
+    { "nome": "Pão de Forma Integral", "descricao": "100% integral, com grãos e fibras. Fatiado.", "preco": "12.90", "categoria": "Pães", "imagem": "pao-integral.jpg" },
+    { "nome": "Pão de Fermentação Natural", "descricao": "Levain de 48h, casca rústica e miolo aerado.", "preco": "24.00", "categoria": "Pães", "imagem": "pao-natural.jpg" },
+    { "nome": "Baguete Artesanal", "descricao": "Tradicional francesa, casca dourada e crocante.", "preco": "9.50", "categoria": "Pães", "imagem": "baguete.jpg" },
+    { "nome": "Bolo de Cenoura com Chocolate", "descricao": "Cobertura generosa de brigadeiro cremoso.", "preco": "39.90", "categoria": "Bolos e Tortas", "imagem": "bolo-cenoura.jpg" },
+    { "nome": "Torta de Limão", "descricao": "Base crocante, recheio cremoso e merengue maçaricado.", "preco": "45.00", "categoria": "Bolos e Tortas", "imagem": "torta-limao.jpg" },
+    { "nome": "Bolo de Fubá Cremoso", "descricao": "Receita da vovó, com erva-doce e textura cremosa.", "preco": "32.00", "categoria": "Bolos e Tortas", "imagem": "bolo-fuba.jpg" },
+    { "nome": "Coxinha de Frango", "descricao": "Massa leve e recheio cremoso de frango desfiado.", "preco": "8.50", "categoria": "Salgados", "imagem": "coxinha.jpg" },
+    { "nome": "Pão de Queijo", "descricao": "Mineiro de verdade, com queijo meia-cura. 6 unidades.", "preco": "14.90", "categoria": "Salgados", "imagem": "pao-de-queijo.jpg" },
+    { "nome": "Empada de Palmito", "descricao": "Massa amanteigada e recheio cremoso de palmito.", "preco": "9.00", "categoria": "Salgados", "imagem": "empada-palmito.jpg" },
+    { "nome": "Sonho de Creme", "descricao": "Recheado com creme baunilha e polvilhado com açúcar.", "preco": "7.50", "categoria": "Doces", "imagem": "sonho.jpg" },
+    { "nome": "Brigadeiro Gourmet", "descricao": "Chocolate belga, granulado nobre. Caixa com 6.", "preco": "24.00", "categoria": "Doces", "imagem": "brigadeiro.jpg" },
+    { "nome": "Croissant de Chocolate", "descricao": "Folhado amanteigado com barra de chocolate ao leite.", "preco": "11.00", "categoria": "Doces", "imagem": "croissant.jpg" },
+    { "nome": "Café Coado 300ml", "descricao": "Grãos torrados na casa, encorpado e aromático.", "preco": "6.00", "categoria": "Bebidas", "imagem": "cafe.jpg" },
+    { "nome": "Suco de Laranja Natural 400ml", "descricao": "Espremido na hora, sem açúcar e sem conservantes.", "preco": "9.90", "categoria": "Bebidas", "imagem": "suco-laranja.jpg" }
+  ]
+}

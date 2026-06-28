@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 
@@ -110,7 +111,7 @@ class PDFExportService {
   // Helper to export specific pages (future implementation)
   async generateMultiPagePDF(pageIds: string[], options: PDFExportOptions = {}): Promise<void> {
     // TODO: Implement logic to render each page individually and add to PDF
-    import.meta.env.DEV && console.log('Multi-page export not yet implemented', pageIds, options);
+    logger.debug('Multi-page export not yet implemented', pageIds, options);
   }
 }
 

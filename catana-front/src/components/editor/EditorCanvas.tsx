@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger';
 import type { FC } from 'react';
 import { useRef, useState, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
@@ -191,7 +192,7 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
                 alt="Imagem do catálogo"
                 className="w-full h-full object-cover"
                 style={{ pointerEvents: 'none' }}
-                onLoad={() => import.meta.env.DEV && console.log('[EditorCanvas] Imagem carregada com sucesso:', element.imageUrl)}
+                onLoad={() => logger.debug('[EditorCanvas] Imagem carregada com sucesso:', element.imageUrl)}
                 onError={(e) => {
                   console.error('[EditorCanvas] Erro ao carregar imagem:', element.imageUrl);
                   e.currentTarget.style.display = 'none';
@@ -262,8 +263,8 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
           </div>
         );
       case 'line':
-        import.meta.env.DEV && console.log('[EditorCanvas] Line element:', element);
-        import.meta.env.DEV && console.log('[EditorCanvas] Has lineData:', !!element.lineData);
+        logger.debug('[EditorCanvas] Line element:', element);
+        logger.debug('[EditorCanvas] Has lineData:', !!element.lineData);
         if (element.lineData) {
           return (
             <Line
@@ -283,7 +284,7 @@ const CanvasElement: FC<CanvasElementProps> = ({ element, isSelected, onDragStar
           </div>
         );
       default:
-        import.meta.env.DEV && console.log('[EditorCanvas] Tipo não reconhecido:', element.type, 'element:', element);
+        logger.debug('[EditorCanvas] Tipo não reconhecido:', element.type, 'element:', element);
         return (
           <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center" style={{
             ...element.style,
