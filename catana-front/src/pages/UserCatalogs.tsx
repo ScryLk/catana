@@ -16,12 +16,14 @@ import {
     Search,
     Share2,
     LayoutTemplate,
-    Upload
+    Upload,
+    Sparkles
 } from 'lucide-react';
 
 import { CreateCatalogModal } from '../components/catalog/CreateCatalogModal';
 import { EditCatalogModal } from '../components/catalog/EditCatalogModal';
 import { ImportCatalogModal } from '../components/editor/ImportCatalogModal';
+import { GerarDemoModal } from '../components/catalog/GerarDemoModal';
 
 export const UserCatalogs: FC = () => {
     const navigate = useNavigate();
@@ -31,6 +33,7 @@ export const UserCatalogs: FC = () => {
     const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [showDemoModal, setShowDemoModal] = useState(false);
     const [editingCatalog, setEditingCatalog] = useState<Catalog | null>(null);
     const [activeSedeId, setActiveSedeId] = useState<number | null>(null);
     const [, setIsNavigating] = useState(false);
@@ -153,6 +156,13 @@ export const UserCatalogs: FC = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
+                                        onClick={() => setShowDemoModal(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors font-medium text-sm cursor-pointer border border-indigo-200 dark:border-indigo-800"
+                                    >
+                                        <Sparkles className="h-4 w-4" />
+                                        Criar catálogo demonstração
+                                    </button>
+                                    <button
                                         onClick={() => setShowImportModal(true)}
                                         className="flex items-center gap-2 px-4 py-2 bg-zinc-800 dark:bg-zinc-800 text-zinc-100 dark:text-zinc-100 rounded-lg hover:bg-zinc-700 dark:hover:bg-zinc-700 transition-colors font-medium text-sm cursor-pointer border border-zinc-700 dark:border-zinc-700"
                                     >
@@ -218,6 +228,12 @@ export const UserCatalogs: FC = () => {
                                                             <div>
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="font-medium text-zinc-900 dark:text-zinc-100 text-base">{catalog.title}</div>
+                                                                    {catalog.is_demo && (
+                                                                        <span className="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full text-[10px] font-bold border border-indigo-200 dark:border-indigo-800">
+                                                                            <Sparkles className="h-3 w-3" />
+                                                                            DEMO
+                                                                        </span>
+                                                                    )}
                                                                     {activeSedeId && catalog.sede && catalog.sede !== activeSedeId && (
                                                                         <div className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-medium border border-blue-200 dark:border-blue-800">
                                                                             <Share2 className="h-3 w-3" />
@@ -344,6 +360,18 @@ export const UserCatalogs: FC = () => {
             <ImportCatalogModal
                 isOpen={showImportModal}
                 onClose={() => setShowImportModal(false)}
+            />
+
+            {/* Gerar Catálogo Demonstração */}
+            <GerarDemoModal
+                isOpen={showDemoModal}
+                onClose={() => setShowDemoModal(false)}
+                onSuccess={(catalogId) => {
+                    setShowDemoModal(false);
+                    navigate(`/editor?catalog=${catalogId}`, {
+                        state: { catalogId },
+                    });
+                }}
             />
         </div>
     );

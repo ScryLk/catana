@@ -5,10 +5,21 @@
  * Aplica automaticamente as regras de layout profissional
  */
 
+import { logger } from '../utils/logger';
 import { genId } from '../utils/id';
 import api from './api';
 import { catalogService } from './catalogService';
 import { processPage, validateCatalog, generateValidationReport } from './layoutEngine.service';
+
+// Base da API para prefixar URLs de mídia relativas (ex.: catálogos demo gravam
+// "/media/..."; o browser precisa da URL absoluta do backend).
+const API_BASE_URL = (import.meta.env && import.meta.env.VITE_API_BASE_URL) || 'http://localhost:8000';
+function absMedia(url?: string): string | undefined {
+  if (!url) return url;
+  if (/^https?:\/\//.test(url) || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.startsWith('/')) return `${API_BASE_URL}${url}`;
+  return url;
+}
 import type { CatalogElement, CatalogPage } from '../types/editor';
 import type { DesignTokens } from '../types/designTokens';
 
@@ -147,7 +158,11 @@ export async function loadImportedCatalog(catalogId: number): Promise<LoadedCata
               // Conteúdo específico por tipo
               content: originalElement.content,
               textData: originalElement.textData,
-              imageData: originalElement.imageData,
+              // imageUrl (fallback do PDF/preview) e imageData.src (canvas) com URL absoluta
+              imageUrl: absMedia(originalElement.imageUrl),
+              imageData: originalElement.imageData
+                ? { ...originalElement.imageData, src: absMedia(originalElement.imageData.src) }
+                : originalElement.imageData,
               lineData: originalElement.lineData,
               productData: originalElement.productData,
               qrCodeData: originalElement.qrCodeData,
@@ -214,17 +229,17 @@ export function processCatalogWithLayoutRules(catalogJson: any): {
   validation: ReturnType<typeof validateCatalog>;
   report: string;
 } {
-  import.meta.env.DEV && console.log('[CatalogLoader] Aplicando regras de layout ao catálogo importado...');
+  logger.debug('[CatalogLoader] Aplicando regras de layout ao catálogo importado...');
 
   // 1. Validar catálogo antes de processar
   const validation = validateCatalog(catalogJson);
   const report = generateValidationReport(catalogJson);
 
-  import.meta.env.DEV && console.log('[CatalogLoader] Relatório de validação:\n', report);
+  logger.debug('[CatalogLoader] Relatório de validação:\n', report);
 
   // 2. Processar cada página aplicando as regras
   const processedPages = catalogJson.pages.map((page: any, pageIndex: number) => {
-    import.meta.env.DEV && console.log(`[CatalogLoader] Processando página ${pageIndex + 1}/${catalogJson.pages.length}...`);
+    logger.debug(`[CatalogLoader] Processando página ${pageIndex + 1}/${catalogJson.pages.length}...`);
 
     // Determinar tamanho da página (A4 por padrão)
     const pageSize = page.size || 'A4';
@@ -264,7 +279,7 @@ export function processCatalogWithLayoutRules(catalogJson: any): {
     }
   };
 
-  import.meta.env.DEV && console.log('[CatalogLoader] ✅ Catálogo processado com sucesso!');
+  logger.debug('[CatalogLoader] ✅ Catálogo processado com sucesso!');
 
   return {
     catalog: processedCatalog,

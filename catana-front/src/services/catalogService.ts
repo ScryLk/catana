@@ -9,6 +9,23 @@ export interface SaveContentResult {
   elements: number;
 }
 
+export type DemoTema = 'padaria' | 'acougue' | 'mercado' | 'restaurante' | 'festas' | 'boutique';
+export type DemoEstrutura = 'completo' | 'essencial' | 'custom';
+
+export interface GerarDemoPayload {
+  tema: DemoTema;
+  estrutura?: DemoEstrutura;
+  secoes?: string[];
+  b2b?: boolean;
+  periodo?: string;
+}
+
+export interface GerarDemoResult {
+  catalog_id: number;
+  title: string;
+  pages: number;
+}
+
 export const catalogService = {
     /**
      * Busca todos os catálogos (com filtros de sede/org)
@@ -96,6 +113,15 @@ export const catalogService = {
             })),
         };
         const response = await api.post<SaveContentResult>(`/api/catalogs/${id}/save_content/`, payload);
+        return response.data;
+    },
+
+    /**
+     * Gera um catálogo de demonstração temático (síncrono).
+     * POST /api/catalogs/gerar-demo/
+     */
+    async gerarDemo(payload: GerarDemoPayload): Promise<GerarDemoResult> {
+        const response = await api.post<GerarDemoResult>('/api/catalogs/gerar-demo/', payload);
         return response.data;
     },
 
