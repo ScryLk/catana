@@ -18,6 +18,7 @@ export interface GerarDemoPayload {
   secoes?: string[];
   b2b?: boolean;
   periodo?: string;
+  identidade_premium?: boolean;
 }
 
 export interface GerarDemoResult {

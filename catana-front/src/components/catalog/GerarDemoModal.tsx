@@ -1,5 +1,5 @@
 import { useState, type FC } from 'react';
-import { X, Loader2, Sparkles } from 'lucide-react';
+import { X, Loader2, Sparkles, Crown } from 'lucide-react';
 import { catalogService, type DemoTema, type DemoEstrutura } from '../../services/catalogService';
 import { toast } from 'sonner';
 
@@ -44,6 +44,7 @@ export const GerarDemoModal: FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   const [estrutura, setEstrutura] = useState<DemoEstrutura>('completo');
   const [secoes, setSecoes] = useState<string[]>(SECOES.map((s) => s.id));
   const [b2b, setB2b] = useState(false);
+  const [premium, setPremium] = useState(true);
   const [gerando, setGerando] = useState(false);
 
   if (!isOpen) return null;
@@ -64,6 +65,7 @@ export const GerarDemoModal: FC<Props> = ({ isOpen, onClose, onSuccess }) => {
         estrutura,
         secoes: estrutura === 'custom' ? secoes : undefined,
         b2b,
+        identidade_premium: premium,
       });
       toast.success(`Catálogo "${result.title}" gerado (${result.pages} páginas).`);
       onSuccess(result.catalog_id);
@@ -113,6 +115,25 @@ export const GerarDemoModal: FC<Props> = ({ isOpen, onClose, onSuccess }) => {
               ))}
             </div>
           </div>
+
+          {/* Identidade visual premium */}
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={premium}
+              onChange={(e) => setPremium(e.target.checked)}
+              className="mt-1 h-4 w-4 accent-indigo-600"
+            />
+            <div>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-indigo-900 dark:text-indigo-200">
+                <Crown className="h-4 w-4 text-indigo-500" />
+                Identidade visual premium (showcase)
+              </div>
+              <div className="text-xs text-indigo-700/80 dark:text-indigo-300/80">
+                Adiciona logo, identidade de marca coesa e capa/contracapa caprichadas. Pronto pra divulgação.
+              </div>
+            </div>
+          </label>
 
           {/* Estrutura */}
           <div>
