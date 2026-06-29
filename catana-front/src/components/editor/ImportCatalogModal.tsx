@@ -1,12 +1,10 @@
 import { type FC, useState, useRef } from 'react';
 import { FiUpload, FiX, FiAlertCircle, FiCheckCircle, FiFile, FiLayers } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { useEditorStore } from '../../store/editorStore';
 import {
   readCatalogFile,
   validateCatalogSchema,
   generateImportPreview,
-  importCatalog,
 } from '../../services/catalogIO.service';
 import { catalogService } from '../../services/catalogService';
 import type { CatalogExportSchema, ImportPreview } from '../../types/catalogIO';
@@ -25,8 +23,6 @@ export const ImportCatalogModal: FC<Props> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-
-  const { importCatalogFromJSON } = useEditorStore();
 
   const handleFileSelect = async (file: File) => {
     setState('reading');
@@ -83,44 +79,25 @@ export const ImportCatalogModal: FC<Props> = ({ isOpen, onClose }) => {
     setState('importing');
 
     try {
-      // 1. Importar e converter o catálogo do JSON
-      const result = importCatalog(schema);
-
-      // 2. Pegar organização e sede ativas do localStorage
-      const activeOrg = localStorage.getItem('active_organization');
-      const activeSede = localStorage.getItem('active_sede');
-
-      if (!activeOrg) {
-        throw new Error('Nenhuma organização ativa encontrada');
-      }
-
-      const organization = JSON.parse(activeOrg);
-      const sede = activeSede ? JSON.parse(activeSede) : null;
-
-      // 3. Criar o catálogo no backend
-      const newCatalog = await catalogService.createCatalog({
-        title: result.catalogName,
-        description: schema.catalog.description || '',
-        organization: organization.id,
-        sede: sede?.id || null,
-        theme: 1, // Tema padrão - você pode ajustar conforme necessário
-        is_public: false,
-        status: 'draft',
-      });
-
-      // 4. Aplicar o conteúdo no store do editor
-      importCatalogFromJSON(result.pages, result.catalogName, result.settings);
+      // Ingest no backend: materializa Page/PageComponent/Component/Theme
+      // (inverso do catalogLoader), deixando o catálogo persistido e editável.
+      const result = await catalogService.importJson(schema);
 
       setState('success');
 
-      // 5. Redirecionar para o editor com o catálogo criado após 1.5s
+      // Abre o catálogo recém-criado; o editor o carrega do backend.
       setTimeout(() => {
         onClose();
         resetState();
-        navigate(`/editor?catalog=${newCatalog.id}`);
-      }, 1500);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao importar catálogo');
+        navigate(`/editor?catalog=${result.catalog_id}`, {
+          state: { catalogId: result.catalog_id },
+        });
+      }, 1200);
+    } catch (err: unknown) {
+      const apiError = (err as { response?: { data?: { error?: string } } })
+        ?.response?.data?.error;
+      const message = err instanceof Error ? err.message : undefined;
+      setError(apiError || message || 'Erro ao importar catálogo');
       setState('error');
     }
   };

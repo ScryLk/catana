@@ -859,6 +859,64 @@ class CatalogViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    @action(detail=False, methods=['post'], url_path='import-json',
+            permission_classes=[permissions.AllowAny])
+    def import_json(self, request):
+        """
+        Ingest de um catálogo no formato catalogIO v1.0 (o JSON que o editor
+        exporta) -> linhas relacionais Page/PageComponent/Component/Theme, de modo
+        que o catálogo nasça EDITÁVEL no editor. Inverso do catalogLoader.
+
+        Body: o próprio JSON catalogIO; opcionalmente envolto em
+        { "data": <catalogIO>, "mode": "new"|"replace", "catalog_id": <id> }.
+
+        'import' é palavra reservada em Python, por isso o método chama-se
+        import_json (rota /api/catalogs/import-json/).
+
+        AllowAny + fallback de dev para organization/sede/created_by, como o resto
+        da API em dev. NB: reintroduz um atalho de dev (ver SEG-02) — apertar antes
+        de prod.
+        """
+        from .catalog_ingest import importar_catalogo_json, IngestError
+
+        body = request.data or {}
+        # Aceita o catalogIO direto OU embrulhado em {data, mode, catalog_id}.
+        if isinstance(body, dict) and body.get('app') == 'Catana':
+            payload, mode, catalog_id = body, body.get('mode', 'new'), body.get('catalog_id')
+        else:
+            payload = body.get('data') if isinstance(body, dict) else None
+            mode = (body.get('mode') if isinstance(body, dict) else None) or 'new'
+            catalog_id = body.get('catalog_id') if isinstance(body, dict) else None
+
+        # Usuário/escopo: autenticado se houver; senão fallback de dev.
+        user = request.user if getattr(request.user, 'is_authenticated', False) else (
+            User.objects.filter(is_superuser=True).first() or User.objects.first()
+        )
+        if user is None:
+            return Response({'error': 'Nenhum usuário disponível para atribuir o catálogo.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        organization = user.organizations.first() or user.owned_organizations.first()
+        sede = None
+        if organization:
+            sede = organization.default_sede or organization.sedes.first()
+
+        try:
+            catalog, n_paginas, n_elementos = importar_catalogo_json(
+                payload, user=user, organization=organization, sede=sede,
+                mode=mode, catalog_id=catalog_id,
+            )
+        except IngestError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'catalog_id': catalog.id,
+            'title': catalog.title,
+            'pages': n_paginas,
+            'elements': n_elementos,
+            'mode': mode,
+            'theme_id': catalog.theme_id,
+        }, status=status.HTTP_201_CREATED)
+
 class PageViewSet(viewsets.ModelViewSet):
     queryset = Page.objects.all()
     serializer_class = PageSerializer

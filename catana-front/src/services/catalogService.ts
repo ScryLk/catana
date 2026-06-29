@@ -1,6 +1,16 @@
 import api from './api';
 import type { Catalog } from '@/types/api';
 import type { CatalogPage } from '@/types/editor';
+import type { CatalogExportSchema } from '@/types/catalogIO';
+
+export interface ImportJsonResult {
+    catalog_id: number;
+    title: string;
+    pages: number;
+    elements: number;
+    mode: string;
+    theme_id: number | null;
+}
 
 export interface SaveContentResult {
   status: string;
@@ -123,6 +133,23 @@ export const catalogService = {
      */
     async gerarDemo(payload: GerarDemoPayload): Promise<GerarDemoResult> {
         const response = await api.post<GerarDemoResult>('/api/catalogs/gerar-demo/', payload);
+        return response.data;
+    },
+
+    /**
+     * Materializa um JSON catalogIO v1.0 como catálogo relacional editável.
+     * POST /api/catalogs/import-json/ (inverso do catalogLoader).
+     * mode 'new' (default) cria um catálogo; 'replace' recria sobre catalogId.
+     */
+    async importJson(
+        schema: CatalogExportSchema,
+        opts?: { mode?: 'new' | 'replace'; catalogId?: number },
+    ): Promise<ImportJsonResult> {
+        const body =
+            opts?.mode === 'replace'
+                ? { data: schema, mode: 'replace', catalog_id: opts.catalogId }
+                : schema;
+        const response = await api.post<ImportJsonResult>('/api/catalogs/import-json/', body);
         return response.data;
     },
 

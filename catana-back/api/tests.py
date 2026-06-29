@@ -104,6 +104,72 @@ class SaveContentTests(APITestCase):
         self.assertEqual(PageComponent.objects.count(), 3)
 
 
+class IngestCatalogIOTests(APITestCase):
+    """Ingest catalogIO v1.0 -> banco: fidelidade, Theme, idempotência, validação."""
+
+    def _json(self):
+        return {
+            'app': 'Catana', 'schemaVersion': '1.0',
+            'catalog': {'name': 'Cat Ingest', 'description': 'd'},
+            'designTokens': {'name': 'T', 'colors': {'primary': {'value': '#abc'}}},
+            'pages': [
+                {'logicalId': 'l0', 'name': 'Capa', 'order': 0, 'elements': [
+                    {'logicalId': 'l1', 'type': 'text-title', 'name': 'Título',
+                     'position': {'x': 56, 'y': 120}, 'size': {'width': 682, 'height': 90},
+                     'zIndex': 0, 'style': {'fontSize': 48}, 'content': {'text': 'Oi'}},
+                ]},
+                {'logicalId': 'l2', 'name': 'P2', 'order': 1, 'elements': [
+                    {'logicalId': 'l3', 'type': 'image', 'position': {'x': 0, 'y': 0},
+                     'size': {'width': 100, 'height': 80}, 'zIndex': 0,
+                     'imageData': {'src': '/media/x.jpg'}, 'imageUrl': '/media/x.jpg'},
+                ]},
+            ],
+        }
+
+    def setUp(self):
+        from .catalog_ingest import importar_catalogo_json
+        self.importar = importar_catalogo_json
+        self.user = User.objects.create_user(username='ig', email='i@i.com',
+                                              password='x', role='admin')
+
+    def test_materializa_geometria_e_content(self):
+        cat, n_pag, n_el = self.importar(self._json(), user=self.user)
+        self.assertEqual((n_pag, n_el), (2, 2))
+        pc = PageComponent.objects.get(component__content__type='text-title')
+        # geometria no PageComponent
+        self.assertEqual((pc.position_x, pc.position_y, pc.width, pc.height, pc.layer),
+                         (56, 120, 682, 90, 0))
+        # content sem geometria, com o resto fiel
+        self.assertNotIn('position', pc.component.content)
+        self.assertEqual(pc.component.content['content'], {'text': 'Oi'})
+        self.assertEqual(pc.component.content['style'], {'fontSize': 48})
+
+    def test_theme_dos_design_tokens(self):
+        cat, _, _ = self.importar(self._json(), user=self.user)
+        self.assertIsNotNone(cat.theme)
+        self.assertEqual(cat.theme.styles['designTokens']['colors']['primary']['value'], '#abc')
+
+    def test_replace_idempotente(self):
+        cat, _, _ = self.importar(self._json(), user=self.user)
+        self.importar(self._json(), user=self.user, mode='replace', catalog_id=cat.id)
+        self.importar(self._json(), user=self.user, mode='replace', catalog_id=cat.id)
+        self.assertEqual(Page.objects.filter(catalog=cat).count(), 2)
+        self.assertEqual(Component.objects.filter(organization__isnull=True).count(), 2)
+
+    def test_endpoint_valida_antes_de_escrever(self):
+        antes = Catalog.objects.count()
+        r = self.client.post('/api/catalogs/import-json/',
+                             {'app': 'X', 'schemaVersion': '1.0', 'catalog': {'name': 'y'}, 'pages': []},
+                             format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(Catalog.objects.count(), antes)  # nada escrito
+
+    def test_endpoint_importa(self):
+        r = self.client.post('/api/catalogs/import-json/', self._json(), format='json')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['pages'], 2)
+
+
 class DemoGeneratorTests(APITestCase):
     """Catálogo de demonstração: gera, é idempotente e baka estilo no content."""
 
