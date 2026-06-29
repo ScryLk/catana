@@ -107,7 +107,10 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
     // Text Elements
     case 'text-title':
       return (
-        <div className="w-full h-full flex items-center justify-center" style={baseStyle}>
+        // items-center (vertical) sem justify-center: o título ocupa a largura
+        // toda e o alinhamento horizontal vem do textAlign — assim um título à
+        // esquerda fica alinhado com a régua/sublinhado (que é left por padrão).
+        <div className="w-full h-full flex items-center" style={baseStyle}>
           <h2
             className="text-2xl font-bold"
             style={{
@@ -115,7 +118,9 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
               fontSize: element.style?.fontSize ? `${element.style.fontSize}px` : undefined,
               fontWeight: element.style?.fontWeight,
               color: element.style?.textColor || '#1F2937',
-              textAlign: element.style?.textAlign,
+              textAlign: element.style?.textAlign || 'left',
+              width: '100%',
+              margin: 0,
             }}
           >
             {element.content?.text || 'Título da Seção'}
@@ -128,7 +133,7 @@ export const ElementRenderer: FC<ElementRendererProps> = ({
     case 'text-list':
       return (
         <div
-          className="w-full h-full flex items-center p-2"
+          className="w-full h-full flex items-start p-2 overflow-hidden"
           style={baseStyle}
         >
           <p

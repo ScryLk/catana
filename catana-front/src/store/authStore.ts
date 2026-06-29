@@ -6,6 +6,25 @@ import axios from 'axios';
 // FRG-04: respeita VITE_API_BASE_URL como o resto dos services (api.ts).
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+// ⚙️ Login automático (conveniência de dev — autenticação não exigida no momento).
+// Para desligar e voltar a exigir login manual: VITE_AUTO_LOGIN=false no .env do front.
+export const AUTO_LOGIN_ENABLED =
+  (import.meta.env.VITE_AUTO_LOGIN ?? 'true') !== 'false';
+const DEFAULT_USER = {
+  username: import.meta.env.VITE_DEFAULT_USER || 'demo',
+  password: import.meta.env.VITE_DEFAULT_PASSWORD || 'demo12345',
+  email: 'demo@catana.dev',
+  role: 'admin',
+};
+
+// Boot do auto-login: roda UMA vez por carregamento de página (não por
+// navegação SPA). Garante um token válido antes de qualquer requisição
+// protegida — sem isso, no reload o editor dispara /catalogs e /pages antes do
+// token e a corrida de 401 fazia o catálogo "sumir".
+let autoLoginPromise: Promise<void> | null = null;
+let autoLoginDone = false;
+export const isAutoLoginSettled = () => autoLoginDone || !AUTO_LOGIN_ENABLED;
+
 interface User {
   id: number;
   name: string;
@@ -25,6 +44,7 @@ interface AuthStore {
   checkAuth: () => void;
   clearError: () => void;
   register: (user: any) => Promise<void>;
+  autoLogin: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -77,7 +97,9 @@ export const useAuthStore = create<AuthStore>()(
               },
             });
 
-            const organizations = orgsResponse.data;
+            // Esta chamada usa axios cru (não a instância 'api'), então o
+            // envelope de paginação do DRF não é desembrulhado aqui.
+            const organizations = orgsResponse.data?.results ?? orgsResponse.data;
 
             if (organizations && organizations.length > 0) {
               // Pega a primeira organização (ou a última usada, se implementado)
@@ -142,6 +164,40 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       clearError: () => set({ error: null }),
+
+      // Entra automaticamente com o usuário padrão. Se ele ainda não existir
+      // (banco novo), registra e já fica autenticado. Idempotente.
+      autoLogin: async () => {
+        if (!AUTO_LOGIN_ENABLED) return;
+        // Uma sessão fresca por carregamento de página (login real → token novo),
+        // memoizada para não relogar a cada navegação SPA.
+        if (autoLoginPromise) return autoLoginPromise;
+        autoLoginPromise = (async () => {
+          try {
+            await get().login({
+              username: DEFAULT_USER.username,
+              password: DEFAULT_USER.password,
+            });
+          } catch {
+            // Usuário padrão pode não existir (banco novo) — cria e autentica.
+            try {
+              await get().register({
+                username: DEFAULT_USER.username,
+                email: DEFAULT_USER.email,
+                password: DEFAULT_USER.password,
+                role: DEFAULT_USER.role,
+              });
+            } catch (err) {
+              if (import.meta.env.DEV) {
+                console.error('[autoLogin] falha ao criar/logar usuário padrão', err);
+              }
+            }
+          } finally {
+            autoLoginDone = true;
+          }
+        })();
+        return autoLoginPromise;
+      },
 
       register: async (credentials) => {
         set({ isLoading: true, error: null });

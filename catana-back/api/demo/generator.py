@@ -497,6 +497,9 @@ def _sec_indice(ctx, order):
 
 
 def _card_produto(ctx, page, prod, x, y, w, h):
+    # Premium-aware (HEAD) + layout ancorado do main: nome -> descrição (ocupa o
+    # vão) -> preço no rodapé. O renderer recorta o overflow (overflow-hidden),
+    # então a descrição longa não invade o preço.
     cores, fontes = ctx['cores'], ctx['fontes']
     if ctx['premium']:
         pal = ctx['ident']['paleta']
@@ -512,22 +515,23 @@ def _card_produto(ctx, page, prod, x, y, w, h):
 
     page.add(el_rect(card_bg, radius=raio, border_color=borda, border_width=1, name='Card'),
              x, y, w, h)
-    img_h = int(h * 0.50)
+    pad = 16
+    img_h = int(h * 0.48)
     if prod.get('_url'):
         page.add(el_image(prod['_url'], radius=max(0, raio - 4), name='Foto'),
                  x + 10, y + 10, w - 20, img_h - 10)
-    ny = y + img_h + 6
-    # Nome com espaço para até 2 linhas (nomes longos quebram).
+    name_y = y + img_h + 8
+    name_h = 44                               # até 2 linhas (nomes longos quebram)
+    price_h = 30
+    price_y = y + h - 12 - price_h            # preço ancorado no rodapé
+    desc_y = name_y + name_h + 2
+    desc_h = max(24, price_y - desc_y - 6)    # descrição ocupa o vão até o preço
     page.add(el_text(prod['nome'], 17, nome_cor, fontes['titulo'], weight='bold',
-                     line_height=1.2, name='Nome'), x + 16, ny, w - 32, 44)
-    # Descrição limitada para não invadir o preço (o renderer não recorta texto).
-    desc = prod.get('descricao', '') or ''
-    if len(desc) > 80:
-        desc = desc[:78].rstrip() + '…'
-    page.add(el_text(desc, 12, desc_cor, fontes['corpo'], line_height=1.3, name='Desc'),
-             x + 16, ny + 48, w - 32, 32)
+                     line_height=1.2, name='Nome'), x + pad, name_y, w - 2 * pad, name_h)
+    page.add(el_text(prod.get('descricao', '') or '', 12, desc_cor, fontes['corpo'],
+                     line_height=1.3, name='Desc'), x + pad, desc_y, w - 2 * pad, desc_h)
     page.add(el_text(f'R$ {prod.get("preco", "0")}', 21, preco_cor, fontes['titulo'],
-                     weight='bold', name='Preço'), x + 16, y + h - 34, w - 32, 32)
+                     weight='bold', name='Preço'), x + pad, price_y, w - 2 * pad, price_h)
 
 
 def _divisor_categoria(ctx, page, categoria):
