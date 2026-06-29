@@ -138,6 +138,14 @@ Aparência + posições ficam espalhadas em `PageComponent` (geometria) + `Compo
 - **Salvar o conteúdo do editor também funciona:** `catalogService.saveCatalogContent(id, pages)` faz `POST /api/catalogs/{id}/save_content/`. A action no `CatalogViewSet` recria `Page/Component/PageComponent` numa **transação**, de forma **idempotente e sem órfãos**. O botão "Salvar" do `FigmaHeader` dispara esse save (além do `downloadCatalogJSON`/export PDF, que continuam).
 - Os viewsets CRUD genéricos de `Page/Component/PageComponent` existem em `urls.py`, mas a persistência do editor passa pela action transacional acima (não por chamadas CRUD avulsas).
 
+#### Ingest de JSON catalogIO → banco (import-only)
+Além do `save_content` (editorStore→banco), há um **ingest de arquivo JSON** no formato **catalogIO v1.0** (o mesmo que `catalogIO.service.ts` exporta) que materializa o catálogo como linhas relacionais — para o catálogo nascer **editável** a partir de um export.
+- **Módulo:** `api/catalog_ingest.py` (`importar_catalogo_json(data, *, user, organization, sede, mode, catalog_id)`). É o **inverso exato do `catalogLoader`**: geometria do elemento → `PageComponent` (`position_x/y`, `width`, `height`, `layer`); o resto (sem geometria) → `Component.content` (lido de volta como `originalElement`); `designTokens` (campo opcional do envelope) → `Theme.styles['designTokens']` + `Catalog.theme`.
+- **Endpoint:** `POST /api/catalogs/import-json/` (**AllowAny** + fallback de dev para org/sede/created_by; `import` é reservado em Python → método `import_json`). Body = o catalogIO direto, ou `{ data, mode, catalog_id }`. Valida o envelope (`app=='Catana'`, `schemaVersion=='1.0'`, `pages`, shape mínimo) e retorna **400 antes de escrever**. Tudo em `transaction.atomic()`.
+- **Idempotência:** `mode='new'` (default) cria um Catalog novo; `mode='replace'` (com `catalog_id`) apaga Pages/PageComponents/Components **não reutilizáveis** daquele catálogo e recria — reimportar o mesmo JSON não duplica páginas.
+- **Verificação:** `python manage.py verificar_ingest` importa um JSON de exemplo, **reconstrói pelos mesmos passos do `catalogLoader`** e compara campo a campo (contagem, posição, tamanho, `Component.content`), além de testar a idempotência. Testes em `api/tests.py` (`IngestCatalogIOTests`).
+- ⚠️ Ainda **import-only**: não há botão de importar no front nesta fase (a fiação no editor fica para uma etapa seguinte). `header`/`footer` de página do catalogIO não têm coluna no `Page` e não fazem round-trip (limitação pré-existente do par loader/modelo).
+
 ### Aparência: 3 camadas
 1. **Por elemento:** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização manual, elemento a elemento, no PropertiesPanel.
 2. **Design Tokens globais (conectado — INC-06):** sistema em `src/types/designTokens.ts` (`colors`/`typography`/`spacing`/`borderRadius`/`shadows` + `DEFAULT_DESIGN_TOKENS`). O store **começa com `DEFAULT_DESIGN_TOKENS`** e há **painel de tema** (`DesignTokensPanel`, botão 🎨 no `FigmaHeader`): paleta, tipografia, presets de um clique e "Aplicar tema aos elementos" (`applyThemeToElements` troca cores/fontes literais por referências `$tokens.*`). O `ElementRenderer` **resolve `$tokens.*`** ao vivo via `utils/themeResolve.ts` (sobre o resolvedor de `types/designTokens.ts`), então editar o tema atualiza tudo na hora.
@@ -225,6 +233,7 @@ python manage.py gerar_catalogo_demo --tema padaria --sem-premium
 | Domínio/dados (backend) | `catana-back/api/models.py` |
 | Rotas da API | `catana-back/api/urls.py` + Swagger em `/api/schema/swagger-ui/` |
 | Lógica/permissões backend | `catana-back/api/views.py`, `api/permissions.py` |
+| Ingest JSON catalogIO → banco | `catana-back/api/catalog_ingest.py` (+ `manage.py verificar_ingest`) |
 | Rotas e bootstrap do front | `catana-front/src/App.tsx`, `src/main.tsx` |
 | Núcleo do editor | `catana-front/src/store/editorStore.ts`, `src/types/editor.ts`, `components/editor/` |
 | Cliente HTTP / JWT | `catana-front/src/services/api.ts`, `src/store/authStore.ts` |
