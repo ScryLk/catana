@@ -849,6 +849,7 @@ class CatalogViewSet(viewsets.ModelViewSet):
                 secoes=data.get('secoes'),
                 b2b=bool(data.get('b2b')),
                 periodo=data.get('periodo'),
+                identidade_premium=bool(data.get('identidade_premium', True)),
             )
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

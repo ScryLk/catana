@@ -17,9 +17,11 @@ remove sedes/categorias/produtos/mídia/catálogo/páginas/componentes) e recria
 """
 import json
 import os
+from io import BytesIO
 
 from django.conf import settings
 from django.core.files import File
+from django.core.files.base import ContentFile
 from django.db import transaction
 
 from ..models import (
@@ -27,6 +29,8 @@ from ..models import (
     Catalog, Page, Component, PageComponent,
 )
 from .themes import get_theme
+from .identidade import computar_identidade
+from . import logo as logo_mod
 
 # ---- Layout (mesmo espaço de coordenadas do front) ----
 PAGE_W = 794
@@ -154,6 +158,19 @@ def _criar_media(path, nome, org, sede, user):
     return media, media.file.url  # url relativa: /media/...
 
 
+def _media_de_pil(img, nome, org, sede, user):
+    """Salva uma imagem PIL como Media (PNG). Retorna (url, largura, altura)."""
+    buf = BytesIO()
+    img.save(buf, 'PNG')
+    buf.seek(0)
+    media = Media(
+        name=f'{nome}.png', organization=org, sede=sede,
+        uploaded_by=user, media_type='image',
+    )
+    media.file.save(f'{nome}.png', ContentFile(buf.read()), save=True)
+    return media.file.url, img.width, img.height
+
+
 # ============================================================
 # Geração
 # ============================================================
@@ -180,9 +197,14 @@ def _resolver_secoes(estrutura, secoes):
 
 @transaction.atomic
 def gerar_catalogo_demo(tema=None, manifest_path=None, estrutura='completo',
-                        secoes=None, b2b=False, periodo=None):
+                        secoes=None, b2b=False, periodo=None,
+                        identidade_premium=True):
     """
     Gera (ou regenera) o catálogo demo de um tema. Retorna o Catalog criado.
+
+    identidade_premium: aplica a camada de identidade visual (logo, marca em
+    cabeçalho/rodapé, capa/divisores/contracapa "designed"). Quando False,
+    mantém o catálogo temático limpo base.
     """
     manifest, base_dir = _carregar_manifest(tema, manifest_path)
     tema = manifest.get('tema', tema)
@@ -251,11 +273,29 @@ def gerar_catalogo_demo(tema=None, manifest_path=None, estrutura='completo',
         is_demo=True,
     )
 
+    # Identidade visual (computada uma vez; baked nos elementos).
+    ident = computar_identidade(tema, theme, manifest)
+    nome_empresa = empresa.get('nome', theme['nome'])
+    logos = {}
+    if identidade_premium:
+        logos['mono'] = _media_de_pil(
+            logo_mod.monograma(ident, nome_empresa), f'logo-mono-{tema}', org, sede, user)
+        logos['word_claro'] = _media_de_pil(
+            logo_mod.wordmark(ident, nome_empresa, cor_texto=ident['paleta']['texto_sobre_primaria']),
+            f'logo-word-claro-{tema}', org, sede, user)
+        logos['word_escuro'] = _media_de_pil(
+            logo_mod.wordmark(ident, nome_empresa, cor_texto=ident['paleta']['primaria']),
+            f'logo-word-escuro-{tema}', org, sede, user)
+        logos['motivo'] = _media_de_pil(
+            logo_mod.motivo_faixa(ident, ident['motivo']), f'motivo-{tema}', org, sede, user)
+
     order = 0
     ctx = dict(catalog=catalog, org=org, sede=sede, user=user, cores=cores,
                fontes=fontes, empresa=empresa, produtos=produtos, manifest=manifest,
                periodo=periodo, incluir_divisores=incluir_divisores,
-               incluir_b2b=incluir_b2b)
+               incluir_b2b=incluir_b2b,
+               premium=identidade_premium, ident=ident, logos=logos,
+               num_pagina=[0])
 
     builders = {
         'capa': _sec_capa,
@@ -294,8 +334,42 @@ def _new_page(ctx, order):
     return PageBuilder(ctx['catalog'], order, ctx['org'], ctx['sede'], ctx['user']), order + 1
 
 
+def _img_aspecto(logos_entry, altura):
+    """Dada uma entrada (url, w, h) e uma altura alvo, retorna (url, largura, altura)."""
+    url, w, h = logos_entry
+    largura = int(altura * (w / h)) if h else altura
+    return url, largura, altura
+
+
+def _marca(page, ctx):
+    """Cabeçalho + rodapé de marca nas páginas de conteúdo (apenas premium)."""
+    if not ctx['premium']:
+        return
+    pal = ctx['ident']['paleta']
+    fontes = ctx['fontes']
+    empresa = ctx['empresa']
+    logos = ctx['logos']
+    ctx['num_pagina'][0] += 1
+    num = ctx['num_pagina'][0]
+    # Cabeçalho: monograma + nome.
+    if logos.get('mono'):
+        page.add(el_image(logos['mono'][0], object_fit='contain', name='Logo'),
+                 MARGIN, 22, 34, 34)
+    page.add(el_text(empresa.get('nome', ''), 13, pal['texto_suave'], fontes['titulo'],
+                     weight='600', name='MarcaNome'), MARGIN + 44, 29, 460, 24)
+    # Rodapé: linha de acento + rede social + número da página.
+    page.add(el_rect(pal['acento'], name='LinhaRodape'), MARGIN, PAGE_H - 54, CONTENT_W, 2)
+    contato = empresa.get('contato', {})
+    page.add(el_text(contato.get('instagram', ''), 11, pal['texto_suave'], fontes['corpo'],
+                     name='Rodape'), MARGIN, PAGE_H - 44, CONTENT_W - 90, 20)
+    page.add(el_text(str(num), 11, pal['texto_suave'], fontes['corpo'], align='right',
+                     name='Num'), MARGIN + CONTENT_W - 90, PAGE_H - 44, 90, 20)
+
+
 def _sec_capa(ctx, order):
     (page, order), cores, fontes, empresa = _new_page(ctx, order), ctx['cores'], ctx['fontes'], ctx['empresa']
+    if ctx['premium']:
+        return _capa_premium(ctx, page, order)
     _bg(page, cores['primary'])
     hero = ctx['produtos'][0]['_url'] if ctx['produtos'] else None
     if hero:
@@ -314,9 +388,46 @@ def _sec_capa(ctx, order):
     return order
 
 
+def _capa_premium(ctx, page, order):
+    pal = ctx['ident']['paleta']
+    fontes = ctx['fontes']
+    empresa = ctx['empresa']
+    logos = ctx['logos']
+    raio = ctx['ident']['tokens']['raio']
+    # Fundo na cor primária + bloco de acento lateral.
+    _bg(page, pal['primaria'])
+    page.add(el_rect(pal['acento'], name='BlocoAcento'), 0, 0, 16, PAGE_H)
+    # Foto hero grande no topo.
+    hero = ctx['produtos'][0]['_url'] if ctx['produtos'] else None
+    if hero:
+        page.add(el_image(hero, radius=raio, name='Hero'), MARGIN, 120, CONTENT_W, 470)
+    # Faixa do motivo gráfico abaixo da foto.
+    if logos.get('motivo'):
+        page.add(el_image(logos['motivo'][0], object_fit='cover', name='Motivo'),
+                 MARGIN, 612, CONTENT_W, 56)
+    # Wordmark (versão clara) como assinatura principal.
+    if logos.get('word_claro'):
+        url, lw, lh = _img_aspecto(logos['word_claro'], 120)
+        page.add(el_image(url, object_fit='contain', name='Wordmark'),
+                 MARGIN, 700, min(lw, CONTENT_W), 120)
+    else:
+        page.add(el_text(empresa.get('nome', ''), 54, pal['texto_sobre_primaria'],
+                         fontes['titulo'], weight='bold', kind='text-title', name='Nome'),
+                 MARGIN, 700, CONTENT_W, 120)
+    # Slogan + régua de acento.
+    page.add(el_rect(pal['acento'], radius=3, name='Régua'), MARGIN, 838, 90, 6)
+    page.add(el_text(empresa.get('slogan', ''), 26, pal['texto_sobre_primaria'],
+                     fontes['corpo'], name='Slogan'), MARGIN, 858, CONTENT_W, 60)
+    rotulo = ctx['periodo'] or 'Catálogo de produtos'
+    page.add(el_text(rotulo.upper(), 15, pal['acento'], fontes['corpo'],
+                     letter_spacing=3, name='Rótulo'), MARGIN, 1040, CONTENT_W, 36)
+    return order
+
+
 def _sec_apresentacao(ctx, order):
     (page, order), cores, fontes, empresa = _new_page(ctx, order), ctx['cores'], ctx['fontes'], ctx['empresa']
     _bg(page, cores['background'])
+    _marca(page, ctx)
     page.add(el_text('Bem-vindo', 42, cores['primary'], fontes['titulo'], weight='bold',
                      kind='text-title', name='Título'), MARGIN, 110, CONTENT_W, 80)
     page.add(el_rect(cores['accent'], radius=3, name='Régua'), MARGIN, 196, 80, 5)
@@ -331,11 +442,21 @@ def _sec_apresentacao(ctx, order):
 
 def _sec_sobre(ctx, order):
     (page, order), cores, fontes, empresa = _new_page(ctx, order), ctx['cores'], ctx['fontes'], ctx['empresa']
-    _bg(page, cores['surface'])
-    _faixa(page, cores['primary'], 0, 150)
-    page.add(el_text('Sobre a empresa', 34, cores['textOnPrimary'], fontes['titulo'],
-                     weight='bold', kind='text-title', name='Título'), MARGIN, 54, CONTENT_W, 60)
-    page.add(el_text(empresa.get('sobre', ''), 19, cores['text'], fontes['corpo'],
+    if ctx['premium']:
+        pal = ctx['ident']['paleta']
+        _bg(page, pal['fundo'])
+        _marca(page, ctx)
+        page.add(el_text('Sobre a empresa', 34, pal['primaria'], fontes['titulo'],
+                         weight='bold', kind='text-title', name='Título'), MARGIN, 96, CONTENT_W, 60)
+        page.add(el_rect(pal['acento'], radius=3, name='Régua'), MARGIN, 162, 80, 5)
+        tcor = pal['texto']
+    else:
+        _bg(page, cores['surface'])
+        _faixa(page, cores['primary'], 0, 150)
+        page.add(el_text('Sobre a empresa', 34, cores['textOnPrimary'], fontes['titulo'],
+                         weight='bold', kind='text-title', name='Título'), MARGIN, 54, CONTENT_W, 60)
+        tcor = cores['text']
+    page.add(el_text(empresa.get('sobre', ''), 19, tcor, fontes['corpo'],
                      line_height=1.7, name='Texto'), MARGIN, 210, CONTENT_W, 320)
     contato = empresa.get('contato', {})
     linhas = [
@@ -360,6 +481,7 @@ def _sec_sobre(ctx, order):
 def _sec_indice(ctx, order):
     (page, order), cores, fontes = _new_page(ctx, order), ctx['cores'], ctx['fontes']
     _bg(page, cores['background'])
+    _marca(page, ctx)
     page.add(el_text('Índice', 40, cores['primary'], fontes['titulo'], weight='bold',
                      kind='text-title', name='Título'), MARGIN, 110, CONTENT_W, 80)
     page.add(el_rect(cores['accent'], radius=3, name='Régua'), MARGIN, 196, 80, 5)
@@ -374,29 +496,66 @@ def _sec_indice(ctx, order):
     return order
 
 
-def _card_produto(page, cores, fontes, prod, x, y, w, h):
-    page.add(el_rect(cores['surface'], radius=14, border_color=cores['border'],
-                     border_width=1, name='Card'), x, y, w, h)
-    # Faixas verticais sem sobreposição: imagem → nome → descrição (ocupa o vão)
-    # → preço ancorado no rodapé. A descrição é dimensionada para terminar antes
-    # do preço (e o renderer recorta o overflow), então não invade o preço.
+def _card_produto(ctx, page, prod, x, y, w, h):
+    # Premium-aware (HEAD) + layout ancorado do main: nome -> descrição (ocupa o
+    # vão) -> preço no rodapé. O renderer recorta o overflow (overflow-hidden),
+    # então a descrição longa não invade o preço.
+    cores, fontes = ctx['cores'], ctx['fontes']
+    if ctx['premium']:
+        pal = ctx['ident']['paleta']
+        raio = ctx['ident']['tokens']['raio']
+        # Sombra simulada (shape não renderiza box-shadow): rect translúcido offset.
+        page.add(el_rect('rgba(0,0,0,0.10)', radius=raio, name='Sombra'), x + 4, y + 7, w, h)
+        card_bg, borda = pal['neutro_claro'], pal['neutro_escuro']
+        nome_cor, preco_cor, desc_cor = pal['texto'], pal['acento'], pal['texto_suave']
+    else:
+        raio = 14
+        card_bg, borda = cores['surface'], cores['border']
+        nome_cor, preco_cor, desc_cor = cores['text'], cores['primary'], cores['textMuted']
+
+    page.add(el_rect(card_bg, radius=raio, border_color=borda, border_width=1, name='Card'),
+             x, y, w, h)
     pad = 16
     img_h = int(h * 0.48)
     if prod.get('_url'):
-        page.add(el_image(prod['_url'], radius=12, name='Foto'), x + 10, y + 10, w - 20, img_h - 10)
+        page.add(el_image(prod['_url'], radius=max(0, raio - 4), name='Foto'),
+                 x + 10, y + 10, w - 20, img_h - 10)
     name_y = y + img_h + 8
-    name_h = 26
+    name_h = 44                               # até 2 linhas (nomes longos quebram)
     price_h = 30
-    price_y = y + h - 12 - price_h           # preço ancorado no rodapé
-    desc_y = name_y + name_h + 4
-    desc_h = max(28, price_y - desc_y - 8)    # descrição ocupa o vão até o preço
-    page.add(el_text(prod['nome'], 18, cores['text'], fontes['titulo'], weight='bold',
-                     name='Nome'), x + pad, name_y, w - 2 * pad, name_h)
-    page.add(el_text(prod.get('descricao', ''), 13, cores['textMuted'], fontes['corpo'],
+    price_y = y + h - 12 - price_h            # preço ancorado no rodapé
+    desc_y = name_y + name_h + 2
+    desc_h = max(24, price_y - desc_y - 6)    # descrição ocupa o vão até o preço
+    page.add(el_text(prod['nome'], 17, nome_cor, fontes['titulo'], weight='bold',
+                     line_height=1.2, name='Nome'), x + pad, name_y, w - 2 * pad, name_h)
+    page.add(el_text(prod.get('descricao', '') or '', 12, desc_cor, fontes['corpo'],
                      line_height=1.3, name='Desc'), x + pad, desc_y, w - 2 * pad, desc_h)
-    preco = prod.get('preco', '0')
-    page.add(el_text(f'R$ {preco}', 21, cores['primary'], fontes['titulo'], weight='bold',
-                     name='Preço'), x + pad, price_y, w - 2 * pad, price_h)
+    page.add(el_text(f'R$ {prod.get("preco", "0")}', 21, preco_cor, fontes['titulo'],
+                     weight='bold', name='Preço'), x + pad, price_y, w - 2 * pad, price_h)
+
+
+def _divisor_categoria(ctx, page, categoria):
+    """Cabeçalho de categoria. Premium: faixa full-bleed com acento + motivo."""
+    cores, fontes = ctx['cores'], ctx['fontes']
+    if ctx['premium']:
+        pal = ctx['ident']['paleta']
+        page.add(el_rect(pal['primaria'], name='FaixaCat'), 0, 0, PAGE_W, 132)
+        page.add(el_rect(pal['acento'], name='AcentoCat'), 0, 132, PAGE_W, 6)
+        if ctx['logos'].get('motivo'):
+            page.add(el_image(ctx['logos']['motivo'][0], object_fit='cover', name='Motivo'),
+                     0, 86, PAGE_W, 40)
+        page.add(el_text(categoria, 38, pal['texto_sobre_primaria'], fontes['titulo'],
+                         weight='bold', kind='text-title', name='Categoria'),
+                 MARGIN, 40, CONTENT_W, 60)
+    elif ctx['incluir_divisores']:
+        _faixa(page, cores['primary'], 0, 120)
+        page.add(el_text(categoria, 32, cores['textOnPrimary'], fontes['titulo'],
+                         weight='bold', kind='text-title', name='Categoria'),
+                 MARGIN, 40, CONTENT_W, 56)
+    else:
+        page.add(el_text(categoria, 30, cores['primary'], fontes['titulo'],
+                         weight='bold', kind='text-title', name='Categoria'),
+                 MARGIN, 90, CONTENT_W, 56)
 
 
 def _sec_produtos(ctx, order):
@@ -409,57 +568,65 @@ def _sec_produtos(ctx, order):
     cols, rows = 2, 3
     gap = 28
     card_w = (CONTENT_W - gap) / cols
-    top0 = 180
-    card_h = (PAGE_H - top0 - MARGIN - gap * (rows - 1)) / rows
+    top0 = 200
+    card_h = (PAGE_H - top0 - MARGIN - 24 - gap * (rows - 1)) / rows
+
+    def bg_pagina(page):
+        _bg(page, ctx['ident']['paleta']['fundo'] if ctx['premium'] else cores['background'])
 
     for categoria, itens in por_cat.items():
-        # nova página por categoria
         page, order = _new_page(ctx, order)
-        _bg(page, cores['background'])
-        if ctx['incluir_divisores']:
-            _faixa(page, cores['primary'], 0, 120)
-            page.add(el_text(categoria, 32, cores['textOnPrimary'], fontes['titulo'],
-                             weight='bold', kind='text-title', name='Categoria'),
-                     MARGIN, 40, CONTENT_W, 56)
-        else:
-            page.add(el_text(categoria, 30, cores['primary'], fontes['titulo'],
-                             weight='bold', kind='text-title', name='Categoria'),
-                     MARGIN, 90, CONTENT_W, 56)
+        bg_pagina(page)
+        _marca(page, ctx)
+        _divisor_categoria(ctx, page, categoria)
         slot = 0
         for prod in itens:
             if slot == cols * rows:
                 page, order = _new_page(ctx, order)
-                _bg(page, cores['background'])
-                page.add(el_text(f'{categoria} (cont.)', 24, cores['primary'],
+                bg_pagina(page)
+                _marca(page, ctx)
+                cont_cor = ctx['ident']['paleta']['primaria'] if ctx['premium'] else cores['primary']
+                page.add(el_text(f'{categoria} (cont.)', 24, cont_cor,
                                  fontes['titulo'], weight='bold', kind='text-title',
-                                 name='Categoria'), MARGIN, 90, CONTENT_W, 50)
+                                 name='Categoria'), MARGIN, 96, CONTENT_W, 50)
                 slot = 0
             r, cidx = divmod(slot, cols)
             x = MARGIN + cidx * (card_w + gap)
             y = top0 + r * (card_h + gap)
-            _card_produto(page, cores, fontes, prod, x, y, card_w, card_h)
+            _card_produto(ctx, page, prod, x, y, card_w, card_h)
             slot += 1
     return order
 
 
 def _sec_especiais(ctx, order):
     (page, order), cores, fontes = _new_page(ctx, order), ctx['cores'], ctx['fontes']
-    _bg(page, cores['primary'])
-    page.add(el_text('Destaques da casa', 40, cores['textOnPrimary'], fontes['titulo'],
+    if ctx['premium']:
+        pal = ctx['ident']['paleta']
+        _bg(page, pal['fundo'])
+        _marca(page, ctx)
+        titulo_cor, card_bg = pal['primaria'], pal['neutro_claro']
+        nome_cor, desc_cor, preco_cor = pal['texto'], pal['texto_suave'], pal['acento']
+        acento = pal['acento']
+    else:
+        _bg(page, cores['primary'])
+        titulo_cor, card_bg = cores['textOnPrimary'], cores['surface']
+        nome_cor, desc_cor, preco_cor = cores['text'], cores['textMuted'], cores['primary']
+        acento = cores['accent']
+    page.add(el_text('Destaques da casa', 40, titulo_cor, fontes['titulo'],
                      weight='bold', kind='text-title', name='Título'), MARGIN, 90, CONTENT_W, 70)
-    page.add(el_rect(cores['accent'], radius=3, name='Régua'), MARGIN, 168, 90, 6)
+    page.add(el_rect(acento, radius=3, name='Régua'), MARGIN, 168, 90, 6)
     destaques = ctx['produtos'][:3]
     y = 220
     for prod in destaques:
-        page.add(el_rect(cores['surface'], radius=14, name='Card'), MARGIN, y, CONTENT_W, 230)
+        page.add(el_rect(card_bg, radius=14, name='Card'), MARGIN, y, CONTENT_W, 230)
         if prod.get('_url'):
             page.add(el_image(prod['_url'], radius=12, name='Foto'), MARGIN + 14, y + 14, 280, 202)
         tx = MARGIN + 320
-        page.add(el_text(prod['nome'], 26, cores['text'], fontes['titulo'], weight='bold',
+        page.add(el_text(prod['nome'], 26, nome_cor, fontes['titulo'], weight='bold',
                          name='Nome'), tx, y + 24, CONTENT_W - 340, 44)
-        page.add(el_text(prod.get('descricao', ''), 16, cores['textMuted'], fontes['corpo'],
+        page.add(el_text(prod.get('descricao', ''), 16, desc_cor, fontes['corpo'],
                          line_height=1.5, name='Desc'), tx, y + 76, CONTENT_W - 340, 90)
-        page.add(el_text(f'R$ {prod.get("preco", "0")}', 26, cores['primary'],
+        page.add(el_text(f'R$ {prod.get("preco", "0")}', 26, preco_cor,
                          fontes['titulo'], weight='bold', name='Preço'),
                  tx, y + 170, CONTENT_W - 340, 40)
         y += 254
@@ -468,7 +635,8 @@ def _sec_especiais(ctx, order):
 
 def _sec_precos(ctx, order):
     (page, order), cores, fontes = _new_page(ctx, order), ctx['cores'], ctx['fontes']
-    _bg(page, cores['background'])
+    _bg(page, ctx['ident']['paleta']['fundo'] if ctx['premium'] else cores['background'])
+    _marca(page, ctx)
     page.add(el_text('Tabela de preços', 38, cores['primary'], fontes['titulo'],
                      weight='bold', kind='text-title', name='Título'), MARGIN, 100, CONTENT_W, 70)
     page.add(el_rect(cores['accent'], radius=3, name='Régua'), MARGIN, 176, 80, 5)
@@ -517,7 +685,8 @@ def _sec_precos(ctx, order):
 
 def _sec_como_comprar(ctx, order):
     (page, order), cores, fontes, empresa = _new_page(ctx, order), ctx['cores'], ctx['fontes'], ctx['empresa']
-    _bg(page, cores['background'])
+    _bg(page, ctx['ident']['paleta']['fundo'] if ctx['premium'] else cores['background'])
+    _marca(page, ctx)
     page.add(el_text('Como comprar', 40, cores['primary'], fontes['titulo'], weight='bold',
                      kind='text-title', name='Título'), MARGIN, 110, CONTENT_W, 80)
     page.add(el_rect(cores['accent'], radius=3, name='Régua'), MARGIN, 196, 80, 5)
@@ -542,7 +711,8 @@ def _sec_como_comprar(ctx, order):
 
 def _sec_termos(ctx, order):
     (page, order), cores, fontes = _new_page(ctx, order), ctx['cores'], ctx['fontes']
-    _bg(page, cores['surface'])
+    _bg(page, ctx['ident']['paleta']['fundo'] if ctx['premium'] else cores['surface'])
+    _marca(page, ctx)
     page.add(el_text('Termos e condições', 32, cores['primary'], fontes['titulo'],
                      weight='bold', kind='text-title', name='Título'), MARGIN, 110, CONTENT_W, 60)
     page.add(el_rect(cores['accent'], radius=3, name='Régua'), MARGIN, 176, 80, 5)
@@ -560,15 +730,40 @@ def _sec_termos(ctx, order):
 
 def _sec_contracapa(ctx, order):
     (page, order), cores, fontes, empresa = _new_page(ctx, order), ctx['cores'], ctx['fontes'], ctx['empresa']
-    _bg(page, cores['primary'])
-    page.add(el_text('Obrigado!', 56, cores['textOnPrimary'], fontes['titulo'], weight='bold',
-                     align='center', kind='text-title', name='Obrigado'), MARGIN, 360, CONTENT_W, 90)
-    page.add(el_text(empresa.get('slogan', ''), 24, cores['accent'], fontes['corpo'],
-                     align='center', name='Slogan'), MARGIN, 470, CONTENT_W, 50)
+    pal = ctx['ident']['paleta'] if ctx['premium'] else None
+    primaria = pal['primaria'] if pal else cores['primary']
+    sobre_prim = pal['texto_sobre_primaria'] if pal else cores['textOnPrimary']
+    acento = pal['acento'] if pal else cores['accent']
+    _bg(page, primaria)
+    page.add(el_rect(acento, name='BlocoAcento'), 0, 0, PAGE_W, 12)
+
+    if ctx['premium']:
+        # Logo (wordmark claro) no topo + motivo.
+        if ctx['logos'].get('word_claro'):
+            url, lw, lh = _img_aspecto(ctx['logos']['word_claro'], 110)
+            page.add(el_image(url, object_fit='contain', name='Wordmark'),
+                     (PAGE_W - min(lw, CONTENT_W)) // 2, 230, min(lw, CONTENT_W), 110)
+        if ctx['logos'].get('motivo'):
+            page.add(el_image(ctx['logos']['motivo'][0], object_fit='cover', name='Motivo'),
+                     MARGIN, 380, CONTENT_W, 40)
+
+    page.add(el_text('Faça seu pedido', 50, sobre_prim, fontes['titulo'], weight='bold',
+                     align='center', kind='text-title', name='CTA'), MARGIN, 470, CONTENT_W, 80)
+    page.add(el_text(empresa.get('slogan', ''), 24, acento, fontes['corpo'],
+                     align='center', name='Slogan'), MARGIN, 580, CONTENT_W, 50)
+    # Bloco de contato em cartão.
     contato = empresa.get('contato', {})
-    rodape = '   ·   '.join([v for v in [
-        contato.get('instagram'), contato.get('telefone'), contato.get('endereco'),
-    ] if v])
-    page.add(el_text(rodape, 16, cores['textOnPrimary'], fontes['corpo'], align='center',
-                     line_height=1.6, name='Rodapé'), MARGIN, 980, CONTENT_W, 80)
+    cy = 700
+    page.add(el_rect(sobre_prim, radius=14, name='CartãoContato'), MARGIN + 80, cy, CONTENT_W - 160, 200)
+    linhas = [v for v in [
+        contato.get('whatsapp') and f'WhatsApp  {contato.get("whatsapp")}',
+        contato.get('telefone') and f'Telefone  {contato.get("telefone")}',
+        contato.get('instagram'),
+        contato.get('endereco'),
+    ] if v]
+    ly = cy + 28
+    for ln in linhas:
+        page.add(el_text(ln, 17, primaria, fontes['corpo'], align='center', name='Contato'),
+                 MARGIN + 80, ly, CONTENT_W - 160, 30)
+        ly += 40
     return order
