@@ -143,8 +143,10 @@ Além do `save_content` (editorStore→banco), há um **ingest de arquivo JSON**
 - **Módulo:** `api/catalog_ingest.py` (`importar_catalogo_json(data, *, user, organization, sede, mode, catalog_id)`). É o **inverso exato do `catalogLoader`**: geometria do elemento → `PageComponent` (`position_x/y`, `width`, `height`, `layer`); o resto (sem geometria) → `Component.content` (lido de volta como `originalElement`); `designTokens` (campo opcional do envelope) → `Theme.styles['designTokens']` + `Catalog.theme`.
 - **Endpoint:** `POST /api/catalogs/import-json/` (**AllowAny** + fallback de dev para org/sede/created_by; `import` é reservado em Python → método `import_json`). Body = o catalogIO direto, ou `{ data, mode, catalog_id }`. Valida o envelope (`app=='Catana'`, `schemaVersion=='1.0'`, `pages`, shape mínimo) e retorna **400 antes de escrever**. Tudo em `transaction.atomic()`.
 - **Idempotência:** `mode='new'` (default) cria um Catalog novo; `mode='replace'` (com `catalog_id`) apaga Pages/PageComponents/Components **não reutilizáveis** daquele catálogo e recria — reimportar o mesmo JSON não duplica páginas.
-- **Verificação:** `python manage.py verificar_ingest` importa um JSON de exemplo, **reconstrói pelos mesmos passos do `catalogLoader`** e compara campo a campo (contagem, posição, tamanho, `Component.content`), além de testar a idempotência. Testes em `api/tests.py` (`IngestCatalogIOTests`).
-- ⚠️ Ainda **import-only**: não há botão de importar no front nesta fase (a fiação no editor fica para uma etapa seguinte). `header`/`footer` de página do catalogIO não têm coluna no `Page` e não fazem round-trip (limitação pré-existente do par loader/modelo).
+- **Verificação:** `python manage.py verificar_ingest` importa um JSON de exemplo, **reconstrói pelos mesmos passos do `catalogLoader`** e compara campo a campo (contagem, posição, tamanho, `Component.content`), além de testar a idempotência. Testes em `api/tests.py` (`IngestCatalogIOTests`) e `api/tests_spec_roundtrip.py` (valida o exemplo §7 do spec abaixo).
+- **Front:** o botão **"Importar"** (em `UserCatalogs` → `ImportCatalogModal`) já está ligado a esse endpoint via `catalogService.importJson()`; importa, persiste e abre `/editor?catalog=<id>`.
+- 📄 **Spec autoritativo para gerar catálogos por JSON:** `docs/CATALOG_JSON_SPEC.md` — schema v1.0 campo a campo, catálogo dos 54 `ElementType` (e quais são round-trip-safe), geometria/página (794×1123 A4), tema/`$tokens.*`, de-para JSON→relacional, exemplos mínimo/completo, checklist e eixos de personalização. **Leia antes de gerar um catálogo por JSON.**
+- ⚠️ `header`/`footer` de página do catalogIO não têm coluna no `Page` e não fazem round-trip (limitação pré-existente do par loader/modelo). Outras pegadinhas (ex.: `product-card` renderiza placeholder; nem todo `*Data` volta pelo loader) estão em `docs/CATALOG_JSON_SPEC.md §10`.
 
 ### Aparência: 3 camadas
 1. **Por elemento:** cada elemento tem `style` + `textData` (fontFamily, fontSize, color…). Customização manual, elemento a elemento, no PropertiesPanel.
@@ -234,6 +236,7 @@ python manage.py gerar_catalogo_demo --tema padaria --sem-premium
 | Rotas da API | `catana-back/api/urls.py` + Swagger em `/api/schema/swagger-ui/` |
 | Lógica/permissões backend | `catana-back/api/views.py`, `api/permissions.py` |
 | Ingest JSON catalogIO → banco | `catana-back/api/catalog_ingest.py` (+ `manage.py verificar_ingest`) |
+| Gerar catálogo por JSON (autoria) | `docs/CATALOG_JSON_SPEC.md` (schema v1.0, de-para, exemplos, eixos) |
 | Rotas e bootstrap do front | `catana-front/src/App.tsx`, `src/main.tsx` |
 | Núcleo do editor | `catana-front/src/store/editorStore.ts`, `src/types/editor.ts`, `components/editor/` |
 | Cliente HTTP / JWT | `catana-front/src/services/api.ts`, `src/store/authStore.ts` |
